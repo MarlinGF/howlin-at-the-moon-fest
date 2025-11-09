@@ -1,16 +1,307 @@
 ---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import EventModals from '../components/EventModals.astro';
+import { fetchFestivalContent } from '../lib/webeFriendsClient';
 
+const festival = await fetchFestivalContent();
+const hero = festival.hero;
+const events = festival.events;
+const scheduleDays = festival.schedule.days;
+const gallery = festival.gallery;
+const sponsors = festival.sponsors;
+const faqs = festival.faqs;
+
+const pageTitle = hero?.title ?? festival.meta.siteName ?? 'WeBeFriends Integration';
+const pageDescription = hero?.description ?? `Latest content powered by WeBeFriends for ${festival.meta.siteName ?? 'this site'}.`;
+const ogImage = hero?.background?.src ?? '/images/hero/moonrise.svg';
+
+const eventsById = new Map(events.map((event) => [event.id, event]));
+const scheduleWithEvents = scheduleDays.map((slot) => ({
+	...slot,
+	events: slot.eventIds
+		.map((eventId) => eventsById.get(eventId))
+		.filter((event): event is NonNullable<typeof event> => Boolean(event)),
+}));
+
+const highlightTags = new Set(['featured', 'spotlight', 'headline']);
+const featuredCandidates = events.filter((event) => event.tags.some((tag) => highlightTags.has(tag.toLowerCase())));
+const featuredEvents = (featuredCandidates.length > 0 ? featuredCandidates : events.slice(0, 3)).filter(Boolean);
+
+const hasHero = Boolean(hero);
+const hasHighlights = featuredEvents.length > 0;
+const hasSchedule = scheduleWithEvents.length > 0;
+const hasGallery = gallery.length > 0;
+const hasSponsors = sponsors.length > 0;
+const hasFaqs = faqs.length > 0;
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout
+	title={pageTitle}
+	description={pageDescription}
+	ogImage={ogImage}
+>
+	{hasHero && hero && (
+		<section
+			id="hero"
+			class="relative isolate overflow-hidden bg-slate-900/60"
+			style={hero.background?.src
+				? `background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85)), url(${hero.background.src}); background-size: cover; background-position: center;`
+				: undefined}
+		>
+			<div class="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"></div>
+			<img
+				src="/images/sky-moon.png"
+				alt="Moonlit clouds"
+				class="pointer-events-none absolute -right-16 -top-10 hidden w-[115vw] max-w-none opacity-75 sm:block lg:-right-24 lg:-top-20 lg:w-[120vw]"
+			/>
+			<div class="relative mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-24 lg:flex-row lg:items-center lg:py-32">
+				<div class="flex-1 space-y-6">
+					{hero.kicker && (
+						<p class="text-xs font-semibold uppercase tracking-[0.5em] text-fuchsia-300/90">
+							{hero.kicker}
+						</p>
+					)}
+					<h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+						{hero.title}
+					</h1>
+					{hero.tagline && <p class="text-xl font-light text-slate-200 sm:text-2xl">{hero.tagline}</p>}
+					{hero.description && <p class="max-w-xl text-base text-slate-300 sm:text-lg">{hero.description}</p>}
+					{(hero.primaryCta || hero.secondaryCta) && (
+						<div class="flex flex-wrap gap-4">
+							{hero.primaryCta && (
+								<a
+									href={hero.primaryCta.href}
+									class="inline-flex items-center gap-2 rounded-full bg-fuchsia-500 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-950 transition hover:bg-fuchsia-400"
+								>
+									{hero.primaryCta.label}
+								</a>
+							)}
+							{hero.secondaryCta && (
+								<a
+									href={hero.secondaryCta.href}
+									class="inline-flex items-center gap-2 rounded-full border border-slate-500/70 bg-slate-900/60 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-200 transition hover:border-fuchsia-400 hover:text-white"
+								>
+									{hero.secondaryCta.label}
+								</a>
+							)}
+						</div>
+					)}
+				</div>
+				<div class="relative w-full flex-1 overflow-hidden rounded-3xl border border-slate-800/70 bg-slate-950/40 shadow-[0_0_35px_-10px_rgba(217,70,239,0.35)] mt-[100px] lg:mt-0 lg:max-w-xl">
+					<video
+						src="/videos/howl-crowd.mp4"
+						autoplay
+						loop
+						muted
+						playsinline
+						preload="metadata"
+						poster={hero.background?.src}
+						class="aspect-video h-full w-full object-cover"
+						aria-label="Crowd highlight reel from Howlin at the Moon"
+					></video>
+					<div class="pointer-events-none absolute inset-0 bg-gradient-to-tr from-slate-950/60 via-transparent to-fuchsia-500/10"></div>
+				</div>
+			</div>
+		</section>
+	)}
+
+	{hasHighlights && (
+		<section id="highlights" class="border-y border-slate-800 bg-slate-950/80">
+		<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-16">
+			<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+				<div>
+					<h2 class="mt-2 text-3xl font-semibold text-white sm:text-4xl">Next Performances</h2>
+				</div>
+			</div>
+			<div class="grid gap-6 md:grid-cols-3">
+				{featuredEvents.map((event) => (
+					<button
+						key={event.id}
+						type="button"
+						class="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 text-left transition hover:border-fuchsia-400/70 hover:shadow-fuchsia-500/20"
+						data-open-modal={`modal-${event.id}`}
+					>
+						<img
+							src={event.image.src}
+							alt={event.image.alt}
+							class="h-48 w-full object-cover object-center transition duration-500 group-hover:scale-105"
+						/>
+						<div class="flex flex-col gap-3 p-6">
+							<p class="text-xs font-semibold uppercase tracking-[0.4em] text-fuchsia-300/90">{event.stage}</p>
+							<h3 class="text-xl font-semibold text-white">{event.title}</h3>
+							<p class="text-sm text-slate-300">
+								{new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} • {event.dayLabel}
+							</p>
+							<div class="flex flex-wrap gap-2">
+								{event.tags.map((tag) => (
+									<span key={tag} class="rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-200">
+										{tag.replace('-', ' ')}
+									</span>
+								))}
+							</div>
+						</div>
+					</button>
+				))}
+			</div>
+		</div>
+		</section>
+	)}
+
+	{hasSchedule && (
+		<section id="schedule" class="bg-slate-950/90">
+		<div class="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-20">
+			<header class="flex flex-col gap-4">
+				<p class="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-300/80">Nightly Flow</p>
+				<h2 class="text-3xl font-semibold text-white sm:text-4xl">Schedule & Stages</h2>
+				<p class="max-w-3xl text-sm text-slate-300 sm:text-base">
+					Align your crew with the curated schedule direct from WeBeFriends. Every time listed reflects mountain standard time. Gates open 90 minutes before the first performance each night.
+				</p>
+			</header>
+			<div class="grid gap-6 lg:grid-cols-2">
+				{scheduleWithEvents.map((slot) => (
+					<div key={slot.dayLabel} class="flex flex-col gap-6 rounded-3xl border border-slate-800 bg-slate-900/60 p-8">
+						<div class="flex items-baseline justify-between gap-4">
+							<div>
+								<p class="text-xs font-semibold uppercase tracking-[0.4em] text-cyan-300/80">{slot.dateLabel}</p>
+								<h3 class="text-2xl font-semibold text-white">{slot.dayLabel}</h3>
+							</div>
+							<p class="text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">Gates {slot.gatesOpen}</p>
+						</div>
+						<ul class="space-y-4">
+							{slot.events.length > 0 ? (
+								slot.events.map((event) => (
+									<li key={event.id} class="flex flex-col gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 transition hover:border-fuchsia-400/70">
+										<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+											<div>
+												<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">{event.stage}</p>
+												<h4 class="text-lg font-semibold text-white">{event.title}</h4>
+											</div>
+											<p class="text-sm font-medium text-slate-200">
+												{new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+												<span class="mx-2 text-slate-500">–</span>
+												{new Date(event.end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+											</p>
+										</div>
+										<div class="flex flex-wrap gap-3 text-sm text-slate-300">
+											<span class="rounded-full bg-emerald-500/20 px-3 py-1">
+												{event.area}
+											</span>
+											<button
+												type="button"
+												class="rounded-full border border-slate-600/70 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-slate-100 transition hover:border-fuchsia-400 hover:text-white"
+												data-open-modal={`modal-${event.id}`}
+											>
+												Details
+											</button>
+										</div>
+									</li>
+								))
+							) : (
+								<li class="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-sm text-slate-400">
+									Set list coming soon. Check back once new events are assigned in WeBeFriends.
+								</li>
+							)}
+						</ul>
+					</div>
+				))}
+			</div>
+		</div>
+		</section>
+	)}
+
+	{hasGallery && (
+		<section id="gallery" class="border-t border-slate-800 bg-slate-950/80">
+		<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-20">
+			<header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+				<div>
+					<p class="text-xs font-semibold uppercase tracking-[0.4em] text-fuchsia-300/80">Scenes</p>
+					<h2 class="text-3xl font-semibold text-white sm:text-4xl">Festival Glimpses</h2>
+				</div>
+				<p class="max-w-xl text-sm text-slate-300">
+					Captured moments flowing straight from the WeBeFriends gallery bundle. Adjust or reorder assets from the Integration Studio.
+				</p>
+			</header>
+			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+				{gallery.map((image) => (
+					<figure key={image.src} class="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50">
+						<img src={image.src} alt={image.alt} class="h-52 w-full object-cover transition duration-500 group-hover:scale-105" />
+						<figcaption class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/50 to-transparent px-4 py-3 text-xs uppercase tracking-[0.3em] text-slate-200">
+							{image.alt}
+						</figcaption>
+					</figure>
+				))}
+			</div>
+		</div>
+		</section>
+	)}
+
+	{hasSponsors && (
+		<section id="sponsors" class="bg-slate-900/70">
+		<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-20">
+			<header class="flex flex-col gap-3">
+				<p class="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-300/80">Partners</p>
+				<h2 class="text-3xl font-semibold text-white sm:text-4xl">Powered by the Pack</h2>
+				<p class="max-w-2xl text-sm text-slate-300">
+					Community sponsors and production partners make the festival glow. Shout-outs update automatically when WeBeFriends publishes new data.
+				</p>
+			</header>
+			<div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+				{sponsors.map((sponsor) => (
+					<article key={sponsor.name} class="flex flex-col gap-3 rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
+						<p class="text-xs font-semibold uppercase tracking-[0.4em] text-fuchsia-300/80">{sponsor.tier}</p>
+						<h3 class="text-lg font-semibold text-white">{sponsor.name}</h3>
+						<p class="text-sm text-slate-300">{sponsor.description}</p>
+					</article>
+				))}
+			</div>
+		</div>
+		</section>
+	)}
+
+	{hasFaqs && (
+		<section id="faq" class="border-t border-slate-800 bg-slate-950/90">
+		<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-20">
+			<header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+				<div>
+					<p class="text-xs font-semibold uppercase tracking-[0.4em] text-fuchsia-300/80">Know Before You Go</p>
+					<h2 class="text-3xl font-semibold text-white sm:text-4xl">FAQs</h2>
+				</div>
+				<p class="max-w-xl text-sm text-slate-300">
+					Operated directly from the WeBeFriends FAQ bundle, so your attendees always see the latest guidance.
+				</p>
+			</header>
+			<div class="grid gap-6 md:grid-cols-2">
+				{faqs.map((faq) => (
+					<article key={faq.question} class="flex flex-col gap-3 rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
+						<h3 class="text-lg font-semibold text-white">{faq.question}</h3>
+						<p class="text-sm text-slate-300">{faq.answer}</p>
+					</article>
+				))}
+			</div>
+		</div>
+		</section>
+	)}
+
+	<section id="tickets" class="border-t border-slate-800 bg-gradient-to-br from-fuchsia-600/40 via-slate-950 to-slate-950">
+		<div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-20 text-center">
+			<p class="text-xs font-semibold uppercase tracking-[0.6em] text-fuchsia-200/80">Tickets</p>
+			<h2 class="text-3xl font-semibold text-white sm:text-4xl">Reserve Your Spot Under the Moon</h2>
+			<p class="mx-auto max-w-2xl text-sm text-slate-100/90">
+				Ticketing hooks in through the WeBeFriends commerce API. Until then, use this anchor to connect your preferred provider or embed. Pricing tiers auto-populate once data is live.
+			</p>
+			<div class="flex flex-wrap justify-center gap-4">
+				<a href="#" class="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-900 transition hover:bg-slate-100">
+					Temporary Box Office
+				</a>
+				<a href="#" class="inline-flex items-center gap-2 rounded-full border border-white/70 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/10">
+					Join Waitlist
+				</a>
+			</div>
+			<p class="text-xs uppercase tracking-[0.4em] text-slate-200/80">
+				Auto-update with live inventory once API integration completes.
+			</p>
+		</div>
+	</section>
+
+	{events.length > 0 && <EventModals events={events} />}
+</BaseLayout>

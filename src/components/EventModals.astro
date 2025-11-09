@@ -1,0 +1,65 @@
+---
+import type { EventDetail } from '../lib/webeFriendsClient';
+import modalClientScript from '../scripts/eventModal.client.ts?url';
+
+interface Props {
+	events: EventDetail[];
+}
+
+const { events } = Astro.props satisfies Props;
+---
+<div aria-hidden="true">
+	{events.map((event) => (
+		<dialog
+			id={`modal-${event.id}`}
+			data-event-modal="true"
+			class="backdrop:bg-slate-950/80 w-full max-w-2xl rounded-3xl border border-slate-700/60 bg-slate-900/95 p-0 text-slate-100 shadow-2xl"
+			aria-labelledby={`modal-title-${event.id}`}
+		>
+			<div class="flex flex-col gap-6 p-8">
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-[0.3em] text-fuchsia-300/80">{event.stage}</p>
+						<h3 id={`modal-title-${event.id}`} class="mt-2 text-3xl font-bold text-white">
+							{event.title}
+						</h3>
+					</div>
+					<button
+						type="button"
+						class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700/70 text-slate-400 transition hover:border-slate-500 hover:text-white"
+						data-close-modal={`modal-${event.id}`}
+					>
+						<span class="sr-only">Close modal</span>
+						&times;
+					</button>
+				</div>
+				<img src={event.image.src} alt={event.image.alt} class="h-60 w-full rounded-2xl object-cover object-center" />
+				<div class="flex flex-wrap gap-4 text-sm text-slate-300">
+					<div class="flex items-center gap-2">
+						<span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
+						<span>{event.dayLabel}</span>
+					</div>
+					<div class="flex items-center gap-2">
+						<span class="inline-flex h-2 w-2 rounded-full bg-cyan-400"></span>
+						<span>{new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} – {new Date(event.end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+					</div>
+					<div class="flex items-center gap-2">
+						<span class="inline-flex h-2 w-2 rounded-full bg-fuchsia-400"></span>
+						<span>{event.area}</span>
+					</div>
+				</div>
+				<p class="text-base leading-relaxed text-slate-200">{event.description}</p>
+				{event.tags.length > 0 && (
+					<ul class="flex flex-wrap gap-2">
+						{event.tags.map((tag) => (
+							<li key={tag} class="rounded-full border border-slate-700/70 bg-slate-800/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-200">
+								{tag.replace('-', ' ')}
+							</li>
+						))}
+					</ul>
+				)}
+			</div>
+		</dialog>
+	))}
+</div>
+<script type="module" src={modalClientScript}></script>

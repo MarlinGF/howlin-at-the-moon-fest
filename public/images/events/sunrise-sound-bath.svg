@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="sunrise" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="70%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#f97316" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="#0f172a" />
+  <circle cx="400" cy="420" r="280" fill="url(#sunrise)" opacity="0.75" />
+  <g fill="#f1f5f9" opacity="0.9">
+    <ellipse cx="200" cy="430" rx="96" ry="24" />
+    <ellipse cx="400" cy="450" rx="110" ry="28" />
+    <ellipse cx="600" cy="430" rx="90" ry="22" />
+  </g>
+  <g fill="#1e293b" opacity="0.75">
+    <path d="M0 520 Q150 480 300 520 T600 510 T800 540 V600 H0 Z" />
+  </g>
+</svg>

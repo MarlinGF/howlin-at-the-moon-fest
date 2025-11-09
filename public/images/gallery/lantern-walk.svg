@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="twilight" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="600" fill="url(#twilight)" />
+  <path d="M0 420 Q120 360 240 420 T480 400 T600 430 V600 H0 Z" fill="#020617" opacity="0.9" />
+  <g fill="#fcd34d" opacity="0.85">
+    <circle cx="140" cy="300" r="28" />
+    <circle cx="280" cy="260" r="34" />
+    <circle cx="420" cy="320" r="24" />
+    <circle cx="520" cy="280" r="20" />
+  </g>
+  <g stroke="#f8fafc" stroke-width="6" stroke-linecap="round" opacity="0.6">
+    <path d="M140 300 L140 420" />
+    <path d="M280 260 L280 420" />
+    <path d="M420 320 L420 420" />
+    <path d="M520 280 L520 420" />
+  </g>
+</svg>

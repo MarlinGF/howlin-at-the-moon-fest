@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="moonrise-gradient" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="50%" stop-color="#312e81" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#moonrise-gradient)" />
+  <circle cx="400" cy="220" r="140" fill="#fbbf24" fill-opacity="0.85" />
+  <path d="M0 430 Q160 360 300 410 T520 420 T800 380 V600 H0 Z" fill="#0f172a" opacity="0.9" />
+  <g fill="#fef3c7" opacity="0.6">
+    <circle cx="150" cy="140" r="4" />
+    <circle cx="650" cy="110" r="5" />
+    <circle cx="580" cy="200" r="3" />
+    <circle cx="210" cy="230" r="2" />
+  </g>
+</svg>
