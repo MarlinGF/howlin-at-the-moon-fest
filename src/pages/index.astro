@@ -33,6 +33,24 @@ const hasSchedule = scheduleWithEvents.length > 0;
 const hasGallery = gallery.length > 0;
 const hasSponsors = sponsors.length > 0;
 const hasFaqs = faqs.length > 0;
+
+const primaryCta = hero?.primaryCta
+	? { ...hero.primaryCta, href: 'https://webefriends.com/page/dRh8mZQsh3cm73dDCIEx' }
+	: hero?.primaryCta ?? {
+		label: 'Get Tickets',
+		href: 'https://webefriends.com/page/dRh8mZQsh3cm73dDCIEx',
+	};
+
+const secondaryCta = hero?.secondaryCta
+	? {
+		...hero.secondaryCta,
+		label: 'Follow us on Facebook',
+		href: 'https://www.facebook.com/groups/256153318091080',
+	}
+	: {
+		label: 'Follow us on Facebook',
+		href: 'https://www.facebook.com/groups/256153318091080',
+	};
 ---
 
 <BaseLayout
@@ -61,7 +79,7 @@ const hasFaqs = faqs.length > 0;
 			/>
 			<div class="relative mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-24 lg:flex-row lg:items-center lg:py-32">
 				<div class="flex-1 space-y-6">
-					{hero.kicker && (
+					{hero.kicker && hero.kicker.toLowerCase() !== 'venue' && (
 						<p class="text-xs font-semibold uppercase tracking-[0.5em] text-fuchsia-300/90">
 							{hero.kicker}
 						</p>
@@ -71,22 +89,22 @@ const hasFaqs = faqs.length > 0;
 					</h1>
 					{hero.tagline && <p class="text-xl font-light text-slate-200 sm:text-2xl">{hero.tagline}</p>}
 					{hero.description && <p class="max-w-xl text-base text-slate-300 sm:text-lg">{hero.description}</p>}
-					{(hero.primaryCta || hero.secondaryCta) && (
+					{(primaryCta || secondaryCta) && (
 						<div class="flex flex-wrap gap-4">
-							{hero.primaryCta && (
+							{primaryCta && (
 								<a
-									href={hero.primaryCta.href}
+									href={primaryCta.href}
 									class="inline-flex items-center gap-2 rounded-full bg-fuchsia-500 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-950 transition hover:bg-fuchsia-400"
 								>
-									{hero.primaryCta.label}
+									{primaryCta.label ?? 'Get Tickets'}
 								</a>
 							)}
-							{hero.secondaryCta && (
+							{secondaryCta && (
 								<a
-									href={hero.secondaryCta.href}
+									href={secondaryCta.href}
 									class="inline-flex items-center gap-2 rounded-full border border-slate-500/70 bg-slate-900/60 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-200 transition hover:border-fuchsia-400 hover:text-white"
 								>
-									{hero.secondaryCta.label}
+									{secondaryCta.label}
 								</a>
 							)}
 						</div>
