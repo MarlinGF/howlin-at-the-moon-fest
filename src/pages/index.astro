@@ -43,6 +43,21 @@ const mapEmbedSrc = hasMapsKey
 const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
 
+const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
+const eventTimeFormatter = new Intl.DateTimeFormat('en-US', {
+	hour: 'numeric',
+	minute: '2-digit',
+	timeZone: festivalTimeZone,
+});
+
+const formatEventTime = (value: string) => {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return value;
+	}
+	return eventTimeFormatter.format(date);
+};
+
 const getOrdinal = (value: number) => {
 	const modTen = value % 10;
 	const modHundred = value % 100;
@@ -263,7 +278,7 @@ const secondaryCta = hero?.secondaryCta
 							<p class="text-xs font-semibold uppercase tracking-[0.4em] text-fuchsia-300/90">{event.stage}</p>
 							<h3 class="text-xl font-semibold text-white">{event.title}</h3>
 							<p class="text-sm text-slate-300">
-								{new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} • {event.dayLabel}
+								{formatEventTime(event.start)} • {event.dayLabel}
 							</p>
 							<div class="flex flex-wrap gap-2">
 								{event.tags.map((tag) => (
@@ -397,9 +412,9 @@ const secondaryCta = hero?.secondaryCta
 												<h4 class="text-lg font-semibold text-white">{event.title}</h4>
 											</div>
 											<p class="text-sm font-medium text-slate-200">
-												{new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+												{formatEventTime(event.start)}
 												<span class="mx-2 text-slate-500">–</span>
-												{new Date(event.end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+												{formatEventTime(event.end)}
 											</p>
 										</div>
 										<div class="flex flex-wrap gap-3 text-sm text-slate-300">

@@ -7,6 +7,21 @@ interface Props {
 }
 
 const { events } = Astro.props satisfies Props;
+
+const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
+const eventTimeFormatter = new Intl.DateTimeFormat('en-US', {
+	hour: 'numeric',
+	minute: '2-digit',
+	timeZone: festivalTimeZone,
+});
+
+const formatEventTime = (value: string) => {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return value;
+	}
+	return eventTimeFormatter.format(date);
+};
 ---
 <div aria-hidden="true">
 	{events.map((event) => (
@@ -41,7 +56,7 @@ const { events } = Astro.props satisfies Props;
 					</div>
 					<div class="flex items-center gap-2">
 						<span class="inline-flex h-2 w-2 rounded-full bg-cyan-400"></span>
-						<span>{new Date(event.start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} – {new Date(event.end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+						<span>{formatEventTime(event.start)} – {formatEventTime(event.end)}</span>
 					</div>
 					<div class="flex items-center gap-2">
 						<span class="inline-flex h-2 w-2 rounded-full bg-fuchsia-400"></span>
