@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import EventModals from '../components/EventModals.astro';
+import GalleryModals from '../components/GalleryModals.astro';
 import { fetchFestivalContent } from '../lib/webeFriendsClient';
 
 const festival = await fetchFestivalContent();
@@ -286,9 +287,6 @@ const secondaryCta = hero?.secondaryCta
 					<p class="text-xs font-semibold uppercase tracking-[0.4em] text-cyan-300/80">Find Your Campsite</p>
 					<h2 class="text-3xl font-semibold text-white sm:text-4xl">Festival Grounds Map</h2>
 				</div>
-				<p class="max-w-xl text-sm text-slate-300">
-					Pin your rig or plan your meetup spots before you arrive. Toggle the map to explore parking, camping zones, and the quickest path to the main gates.
-				</p>
 			</header>
 			<div data-map-container class="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60">
 				<iframe
@@ -374,9 +372,9 @@ const secondaryCta = hero?.secondaryCta
 		<div class="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-20">
 			<header class="flex flex-col gap-4">
 				<p class="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-300/80">Nightly Flow</p>
-				<h2 class="text-3xl font-semibold text-white sm:text-4xl">Schedule & Stages</h2>
+				<h2 class="text-3xl font-semibold text-white sm:text-4xl">Full Season Schedule</h2>
 				<p class="max-w-3xl text-sm text-slate-300 sm:text-base">
-					Align your crew with the curated schedule direct from WeBeFriends. Every time listed reflects mountain standard time, and gates open at 10:00 AM so you can settle in before the first performance.
+					Remember Howlers — due to the unpredictable weather here in the foothills, all events are subject to change without notice. It's always best to check before heading out!
 				</p>
 			</header>
 			<div class="grid gap-6 lg:grid-cols-2">
@@ -444,14 +442,40 @@ const secondaryCta = hero?.secondaryCta
 				</p>
 			</header>
 			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-				{gallery.map((image) => (
-					<figure key={image.src} class="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50">
-						<img src={image.src} alt={image.alt} class="h-52 w-full object-cover transition duration-500 group-hover:scale-105" />
-						<figcaption class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/50 to-transparent px-4 py-3 text-xs uppercase tracking-[0.3em] text-slate-200">
-							{image.alt}
-						</figcaption>
-					</figure>
-				))}
+				{gallery.map((image, index) => {
+					const galleryKey = `gallery-${index}`;
+					const modalId = `modal-gallery-${index}`;
+					const caption = image.alt || `Festival photo ${index + 1}`;
+					return (
+						<button
+							key={image.src}
+							type="button"
+							class="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50 text-left transition hover:border-fuchsia-400/70 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+							data-gallery-toggle
+							data-gallery-target={modalId}
+							data-gallery-id={galleryKey}
+						>
+							<span
+								class="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-slate-950/80 px-3 py-1 text-xs font-semibold text-slate-200"
+								data-gallery-badge-wrapper={galleryKey}
+								aria-live="polite"
+							>
+								<span aria-hidden="true">💬</span>
+								<span data-gallery-badge={galleryKey}>0</span>
+								<span class="sr-only" data-gallery-badge-sr>0 comments on this photo</span>
+							</span>
+							<img
+								src={image.src}
+								alt={image.alt}
+								class="h-52 w-full object-cover transition duration-500 group-hover:scale-105"
+							/>
+							<span class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 via-slate-950/50 to-transparent px-4 py-3 text-xs uppercase tracking-[0.3em] text-slate-200">
+								{caption}
+							</span>
+							<span class="sr-only">Open full view of {caption}</span>
+						</button>
+					);
+				})}
 			</div>
 		</div>
 		</section>
@@ -525,6 +549,7 @@ const secondaryCta = hero?.secondaryCta
 		</div>
 	</section>
 
+	{hasGallery && <GalleryModals images={gallery} />}
 	{events.length > 0 && <EventModals events={events} />}
 
 </BaseLayout>

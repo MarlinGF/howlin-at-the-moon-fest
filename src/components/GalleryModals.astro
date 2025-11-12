@@ -1,0 +1,158 @@
+---
+import type { ImageAsset } from '../lib/webeFriendsClient';
+import galleryScriptUrl from '../scripts/galleryModal.client.js?url';
+
+interface Props {
+	images: ImageAsset[];
+}
+
+const { images } = Astro.props;
+---
+{images.map((image, index) => {
+	const dialogId = `modal-gallery-${index}`;
+	const galleryKey = `gallery-${index}`;
+	const headingId = `${dialogId}-heading`;
+	return (
+		<dialog
+			id={dialogId}
+			aria-labelledby={headingId}
+			data-gallery-modal="true"
+			data-gallery-id={galleryKey}
+			class="backdrop:bg-slate-950/85 w-full max-w-4xl rounded-3xl border border-slate-700/60 bg-slate-900/95 p-0 text-slate-100 shadow-2xl"
+		>
+			<div class="relative flex max-h-[90vh] w-full max-w-4xl flex-col gap-6 overflow-y-auto rounded-3xl border border-slate-800 bg-slate-950/80 p-6 shadow-2xl">
+				<header class="flex items-start justify-between gap-4">
+					<div>
+						<p class="text-xs uppercase tracking-wide text-fuchsia-300/80">Festival Gallery</p>
+						<h3 id={headingId} class="text-2xl font-semibold text-slate-100">
+							{image.alt || `Festival photo ${index + 1}`}
+						</h3>
+					</div>
+					<button
+						type="button"
+						class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-800 bg-slate-900/70 text-slate-200 transition hover:border-fuchsia-400/70 hover:text-fuchsia-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+						data-gallery-close
+					>
+						<span aria-hidden="true" class="text-2xl leading-none">×</span>
+						<span class="sr-only">Close photo</span>
+					</button>
+				</header>
+				<div class="overflow-hidden rounded-3xl border border-slate-800">
+					<img src={image.src} alt={image.alt} class="h-full max-h-[55vh] w-full object-cover" loading="lazy" />
+				</div>
+				<section
+					data-gallery-comment
+					data-gallery-id={galleryKey}
+					class="space-y-4 rounded-3xl border border-slate-800 bg-slate-900/70 p-5"
+				>
+					<div class="flex flex-wrap items-center justify-between gap-3">
+						<div class="flex items-center gap-2">
+							<h4 class="text-lg font-semibold text-slate-100">Comments</h4>
+							<span class="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs text-slate-300" data-comment-count>0</span>
+						</div>
+						<button
+							type="button"
+							class="inline-flex items-center gap-2 rounded-full border border-fuchsia-500/60 px-4 py-2 text-sm font-medium text-fuchsia-200 transition hover:border-fuchsia-400 hover:bg-fuchsia-500/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+							data-comment-trigger
+						>
+							<span aria-hidden="true">💬</span>
+							Add a comment
+						</button>
+					</div>
+					<ul class="space-y-3" data-comment-list></ul>
+					<div data-comment-body class="hidden space-y-4">
+						<div data-comment-state="guest" class="space-y-4">
+							<p class="text-sm text-slate-300">
+								Remember Howlers, comments live on WeBeFriends. Join the community to post your take.
+								<a
+									href="https://webefriends.com/signup"
+									target="_blank"
+									rel="noreferrer"
+									class="ml-1 font-semibold text-fuchsia-200 underline-offset-4 hover:underline"
+								>
+									Sign up for free on WeBeFriends.com
+								</a>
+							</p>
+							<div class="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+								<button
+									type="button"
+									class="inline-flex items-center justify-center rounded-full border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-fuchsia-400/70 hover:text-fuchsia-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+									data-comment-show-signin
+								>
+									Already a member? Sign in here
+								</button>
+								<form data-comment-signin-form class="hidden space-y-3">
+									<div class="space-y-1">
+										<label for={`${dialogId}-email`} class="text-sm text-slate-300">Email</label>
+										<input
+											type="email"
+											id={`${dialogId}-email`}
+											name="email"
+											required
+											class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+										/>
+									</div>
+									<div class="space-y-1">
+										<label for={`${dialogId}-password`} class="text-sm text-slate-300">Password</label>
+										<input
+											type="password"
+											id={`${dialogId}-password`}
+											name="password"
+											required
+											class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+										/>
+									</div>
+									<div class="space-y-1">
+										<label for={`${dialogId}-display-name`} class="text-sm text-slate-300">Display name</label>
+										<input
+											type="text"
+											id={`${dialogId}-display-name`}
+											name="displayName"
+											required
+											class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+										/>
+									</div>
+									<button
+										type="submit"
+										class="inline-flex w-full items-center justify-center rounded-full bg-fuchsia-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+									>
+										Sign in and start commenting
+									</button>
+								</form>
+							</div>
+						</div>
+						<div data-comment-state="signed-in" class="hidden space-y-4">
+							<p class="text-sm text-slate-300" data-comment-user></p>
+							<form data-comment-form class="space-y-3">
+								<label class="space-y-2 text-sm text-slate-200">
+									<span>Share your memories from this set</span>
+									<textarea
+										required
+										rows={4}
+										class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+									></textarea>
+								</label>
+								<div class="flex flex-wrap items-center gap-3">
+									<button
+										type="submit"
+										class="inline-flex items-center justify-center rounded-full bg-fuchsia-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+									>
+										Post comment
+									</button>
+									<button
+										type="button"
+										class="inline-flex items-center justify-center rounded-full border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-fuchsia-400/70 hover:text-fuchsia-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
+										data-comment-signout
+									>
+										Sign out
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				</section>
+			</div>
+		</dialog>
+	);
+})}
+<script type="module" src={galleryScriptUrl}></script>
