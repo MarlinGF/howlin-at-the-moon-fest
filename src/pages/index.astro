@@ -327,9 +327,12 @@ const secondaryCta = hero?.secondaryCta
 			)}
 		</div>
 		<script is:inline>
-			document.addEventListener('astro:load', () => {
-				const containers = document.querySelectorAll('[data-map-container]');
-				containers.forEach((container) => {
+			const initGroundsMap = () => {
+				document.querySelectorAll('[data-map-container]').forEach((container) => {
+					if (container.hasAttribute('data-map-initialized')) {
+						return;
+					}
+					container.setAttribute('data-map-initialized', 'true');
 					const toggle = container.querySelector('[data-map-toggle]');
 					const frame = container.querySelector('iframe[data-map-frame]');
 					if (!toggle || !frame) {
@@ -346,13 +349,23 @@ const secondaryCta = hero?.secondaryCta
 							if (frame.getAttribute('src') !== src) {
 								frame.setAttribute('src', src);
 							}
-							toggle.classList.add('hidden');
 							frame.classList.remove('hidden');
+							frame.removeAttribute('hidden');
+							frame.style.removeProperty('display');
+							toggle.setAttribute('aria-hidden', 'true');
+							toggle.remove();
 						},
 						{ once: true }
 					);
 				});
-			});
+			};
+
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', initGroundsMap, { once: true });
+			} else {
+				initGroundsMap();
+			}
+			document.addEventListener('astro:page-load', initGroundsMap);
 		</script>
 	</section>
 
