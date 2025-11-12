@@ -236,13 +236,13 @@ const fallbackFestivalContentTemplate: FestivalContent = {
 			{
 				dayLabel: 'Friday',
 				dateLabel: 'Oct 18',
-				gatesOpen: '5:00 PM',
+				gatesOpen: '10:00 AM',
 				eventIds: ['moonrise-ceremony', 'starlit-groove', 'midnight-market'],
 			},
 			{
 				dayLabel: 'Saturday',
 				dateLabel: 'Oct 19',
-				gatesOpen: '4:30 PM',
+				gatesOpen: '10:00 AM',
 				eventIds: ['sunrise-sound-bath', 'lunar-legends', 'cosmic-closer'],
 			},
 		],
@@ -279,7 +279,7 @@ const fallbackFestivalContentTemplate: FestivalContent = {
 		{
 			question: 'What are the festival hours?',
 			answer:
-				'Gates open at 5:00 PM on Friday and 4:30 PM on Saturday. Programming runs until 12:30 AM each night with chill-out zones open until 2:00 AM.',
+				'Gates open at 10:00 AM each day. Programming runs until 12:30 AM with chill-out zones open until 2:00 AM.',
 		},
 		{
 			question: 'Is re-entry allowed?',
