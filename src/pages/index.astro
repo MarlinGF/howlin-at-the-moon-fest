@@ -16,23 +16,125 @@ const pageDescription = hero?.description ?? `Latest content powered by WeBeFrie
 const ogImage = hero?.background?.src ?? '/images/hero/moonrise.svg';
 
 const eventsById = new Map(events.map((event) => [event.id, event]));
+const standardGatesOpen = '10:00 AM';
 const scheduleWithEvents = scheduleDays.map((slot) => ({
 	...slot,
+	gatesOpen: standardGatesOpen,
 	events: slot.eventIds
 		.map((eventId) => eventsById.get(eventId))
 		.filter((event): event is NonNullable<typeof event> => Boolean(event)),
 }));
 
-const highlightTags = new Set(['featured', 'spotlight', 'headline']);
-const featuredCandidates = events.filter((event) => event.tags.some((tag) => highlightTags.has(tag.toLowerCase())));
-const featuredEvents = (featuredCandidates.length > 0 ? featuredCandidates : events.slice(0, 3)).filter(Boolean);
-
 const hasHero = Boolean(hero);
-const hasHighlights = featuredEvents.length > 0;
-const hasSchedule = scheduleWithEvents.length > 0;
 const hasGallery = gallery.length > 0;
 const hasSponsors = sponsors.length > 0;
 const hasFaqs = faqs.length > 0;
+const hasMapsKey = Boolean(import.meta.env.PUBLIC_GOOGLE_MAPS_KEY);
+const mapQueryRaw = (import.meta.env.PUBLIC_GOOGLE_MAPS_QUERY ?? 'Yuma Territorial Prison State Historic Park, Yuma AZ').trim();
+const mapZoomParsed = Number.parseInt(import.meta.env.PUBLIC_GOOGLE_MAPS_ZOOM ?? '', 10);
+const mapZoom = Number.isFinite(mapZoomParsed) ? mapZoomParsed : 15;
+const isCoordinateQuery = /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(mapQueryRaw);
+const mapEmbedSrc = hasMapsKey
+	? isCoordinateQuery
+		? `https://www.google.com/maps/embed/v1/view?key=${import.meta.env.PUBLIC_GOOGLE_MAPS_KEY}&center=${encodeURIComponent(mapQueryRaw)}&zoom=${mapZoom}&maptype=roadmap`
+		: `https://www.google.com/maps/embed/v1/place?key=${import.meta.env.PUBLIC_GOOGLE_MAPS_KEY}&q=${encodeURIComponent(mapQueryRaw)}&zoom=${mapZoom}`
+	: '';
+const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
+const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
+
+const getOrdinal = (value: number) => {
+	const modTen = value % 10;
+	const modHundred = value % 100;
+	if (modTen === 1 && modHundred !== 11) return 'st';
+	if (modTen === 2 && modHundred !== 12) return 'nd';
+	if (modTen === 3 && modHundred !== 13) return 'rd';
+	return 'th';
+};
+
+const formatDateLabel = (date: Date, options?: { includeMonth?: boolean }) => {
+	const includeMonth = options?.includeMonth ?? true;
+	const month = date.toLocaleString('en-US', { month: 'short' });
+	const day = date.getDate();
+	const suffix = getOrdinal(day);
+	return includeMonth ? `${month} ${day}${suffix}` : `${day}${suffix}`;
+};
+
+const now = new Date();
+const eventsWithTemporalData = events
+	.map((event) => {
+		const startDate = new Date(event.start);
+		const endDate = new Date(event.end);
+		return { event, startDate, endDate };
+	})
+	.filter(({ startDate, endDate }) => !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime()))
+	.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+const eventsGroupedByMonth = new Map<string, typeof eventsWithTemporalData>();
+eventsWithTemporalData.forEach((entry) => {
+	const monthKey = `${entry.startDate.getFullYear()}-${String(entry.startDate.getMonth() + 1).padStart(2, '0')}`;
+	const bucket = eventsGroupedByMonth.get(monthKey);
+	if (bucket) {
+		bucket.push(entry);
+	} else {
+		eventsGroupedByMonth.set(monthKey, [entry]);
+	}
+});
+
+const monthlyEventGroups = Array.from(eventsGroupedByMonth.values())
+	.map((group) => {
+		const sorted = [...group].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+		const firstDate = sorted[0]?.startDate;
+		const finalEndDate = sorted[sorted.length - 1]?.endDate;
+		if (!firstDate || !finalEndDate) {
+			return undefined;
+		}
+		const expiry = new Date(finalEndDate);
+		expiry.setHours(0, 0, 0, 0);
+		expiry.setDate(expiry.getDate() + 1);
+		return { events: sorted, firstDate, expiry };
+	})
+	.filter((group): group is { events: typeof eventsWithTemporalData; firstDate: Date; expiry: Date } => Boolean(group))
+	.sort((a, b) => a.firstDate.getTime() - b.firstDate.getTime());
+
+const activeMonthlyGroup =
+	monthlyEventGroups.find((group) => now < group.expiry) ??
+	monthlyEventGroups.find((group) => group.firstDate.getTime() >= now.getTime()) ??
+	monthlyEventGroups[monthlyEventGroups.length - 1];
+
+const featuredEvents = activeMonthlyGroup ? activeMonthlyGroup.events.slice(0, 2).map((entry) => entry.event) : [];
+const hasHighlights = featuredEvents.length > 0;
+const hasSchedule = scheduleWithEvents.length > 0;
+
+const featuredEventDays = featuredEvents
+	.map((event) => new Date(event.start))
+	.filter((date) => !Number.isNaN(date.getTime()))
+	.sort((a, b) => a.getTime() - b.getTime());
+
+const uniqueFeaturedDays = Array.from(
+	new Map(
+		featuredEventDays.map((date) => {
+			const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+			return [key, date] as const;
+		})
+	).values()
+);
+
+const nextEventDaysSlice = uniqueFeaturedDays.slice(0, 2);
+
+let nextHowlingHeading = 'Next Howling';
+if (nextEventDaysSlice.length === 1) {
+	const [first] = nextEventDaysSlice;
+	nextHowlingHeading = `Next Howling ${formatDateLabel(first)}`;
+} else if (nextEventDaysSlice.length === 2) {
+	const [first, second] = nextEventDaysSlice;
+	const sameMonth = first.getMonth() === second.getMonth() && first.getFullYear() === second.getFullYear();
+	if (sameMonth) {
+		const monthLabel = first.toLocaleString('en-US', { month: 'short' });
+		nextHowlingHeading = `Next Howling ${monthLabel} ${formatDateLabel(first, { includeMonth: false })} & ${formatDateLabel(second, { includeMonth: false })}`;
+	} else {
+		nextHowlingHeading = `Next Howling ${formatDateLabel(first)} & ${formatDateLabel(second)}`;
+	}
+}
 
 const primaryCta = hero?.primaryCta
 	? { ...hero.primaryCta, href: 'https://webefriends.com/page/dRh8mZQsh3cm73dDCIEx' }
@@ -107,6 +209,13 @@ const secondaryCta = hero?.secondaryCta
 									{secondaryCta.label}
 								</a>
 							)}
+							<button
+								type="button"
+								class="inline-flex items-center gap-2 rounded-full border border-fuchsia-400/70 bg-slate-900/40 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-fuchsia-200 transition hover:bg-fuchsia-500/10 hover:text-white"
+								data-open-modal="modal-camping-info"
+							>
+								Camping
+							</button>
 						</div>
 					)}
 				</div>
@@ -133,15 +242,15 @@ const secondaryCta = hero?.secondaryCta
 		<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-16">
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 				<div>
-					<h2 class="mt-2 text-3xl font-semibold text-white sm:text-4xl">Next Performances</h2>
+					<h2 class="mt-2 text-3xl font-semibold text-white sm:text-4xl">{nextHowlingHeading}</h2>
 				</div>
 			</div>
-			<div class="grid gap-6 md:grid-cols-3">
+			<div class="grid gap-6 sm:grid-cols-2 sm:justify-items-center">
 				{featuredEvents.map((event) => (
 					<button
 						key={event.id}
 						type="button"
-						class="group relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 text-left transition hover:border-fuchsia-400/70 hover:shadow-fuchsia-500/20"
+						class="group relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 text-left transition hover:border-fuchsia-400/70 hover:shadow-fuchsia-500/20"
 						data-open-modal={`modal-${event.id}`}
 					>
 						<img
@@ -170,6 +279,83 @@ const secondaryCta = hero?.secondaryCta
 		</section>
 	)}
 
+	<section id="grounds-map" class="border-t border-slate-800 bg-slate-950/85">
+		<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-20">
+			<header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+				<div>
+					<p class="text-xs font-semibold uppercase tracking-[0.4em] text-cyan-300/80">Find Your Campsite</p>
+					<h2 class="text-3xl font-semibold text-white sm:text-4xl">Festival Grounds Map</h2>
+				</div>
+				<p class="max-w-xl text-sm text-slate-300">
+					Pin your rig or plan your meetup spots before you arrive. Toggle the map to explore parking, camping zones, and the quickest path to the main gates.
+				</p>
+			</header>
+			<div data-map-container class="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60">
+				<iframe
+					data-map-frame
+					title="Google Map of Howlin' At The Moon Festival grounds"
+					src="about:blank"
+					loading="lazy"
+					allowfullscreen
+					referrerpolicy="no-referrer-when-downgrade"
+					class="hidden h-[420px] w-full rounded-3xl"
+				></iframe>
+				<button
+					type="button"
+					data-map-toggle
+					data-map-src={mapEmbedSrc}
+					class={`group relative flex h-[420px] w-full items-center justify-center overflow-hidden rounded-3xl border text-white transition ${
+						hasMapsKey ? 'border-slate-800 hover:border-fuchsia-400/70 hover:shadow-[0_0_35px_-10px_rgba(217,70,239,0.45)]' : 'border-dashed border-slate-700'
+					}`}
+					style="cursor: pointer;"
+				>
+					<img
+						src={mapCoverImage}
+						alt="Stylized festival map teaser graphic"
+						class="absolute inset-0 h-full w-full object-cover opacity-80 transition duration-500 group-hover:scale-105 group-hover:opacity-100"
+					/>
+					<div class="absolute inset-0 bg-gradient-to-br from-slate-950/85 via-slate-900/70 to-fuchsia-500/20"></div>
+					<span class="relative z-10 text-center text-lg font-semibold uppercase tracking-[0.4em] text-fuchsia-100">
+						{mapToggleLabel}
+					</span>
+				</button>
+			</div>
+			{!hasMapsKey && (
+				<p class="text-sm text-slate-400">
+					Add a Google Maps API key to the <code class="rounded bg-slate-900 px-2 py-1 text-xs text-slate-200">PUBLIC_GOOGLE_MAPS_KEY</code> variable in your <code class="rounded bg-slate-900 px-2 py-1 text-xs text-slate-200">.env.local</code> file to unlock the live map. Provide a custom location or coordinates with <code class="rounded bg-slate-900 px-2 py-1 text-xs text-slate-200">PUBLIC_GOOGLE_MAPS_QUERY</code> and an optional zoom via <code class="rounded bg-slate-900 px-2 py-1 text-xs text-slate-200">PUBLIC_GOOGLE_MAPS_ZOOM</code>.
+				</p>
+			)}
+		</div>
+		<script is:inline>
+			document.addEventListener('astro:load', () => {
+				const containers = document.querySelectorAll('[data-map-container]');
+				containers.forEach((container) => {
+					const toggle = container.querySelector('[data-map-toggle]');
+					const frame = container.querySelector('iframe[data-map-frame]');
+					if (!toggle || !frame) {
+						return;
+					}
+					toggle.addEventListener(
+						'click',
+						() => {
+							const src = toggle.getAttribute('data-map-src');
+							if (!src) {
+								console.warn('Set PUBLIC_GOOGLE_MAPS_KEY to enable the embedded Google Map.');
+								return;
+							}
+							if (frame.getAttribute('src') !== src) {
+								frame.setAttribute('src', src);
+							}
+							toggle.classList.add('hidden');
+							frame.classList.remove('hidden');
+						},
+						{ once: true }
+					);
+				});
+			});
+		</script>
+	</section>
+
 	{hasSchedule && (
 		<section id="schedule" class="bg-slate-950/90">
 		<div class="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-20">
@@ -177,7 +363,7 @@ const secondaryCta = hero?.secondaryCta
 				<p class="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-300/80">Nightly Flow</p>
 				<h2 class="text-3xl font-semibold text-white sm:text-4xl">Schedule & Stages</h2>
 				<p class="max-w-3xl text-sm text-slate-300 sm:text-base">
-					Align your crew with the curated schedule direct from WeBeFriends. Every time listed reflects mountain standard time. Gates open 90 minutes before the first performance each night.
+					Align your crew with the curated schedule direct from WeBeFriends. Every time listed reflects mountain standard time, and gates open at 10:00 AM so you can settle in before the first performance.
 				</p>
 			</header>
 			<div class="grid gap-6 lg:grid-cols-2">
@@ -327,4 +513,5 @@ const secondaryCta = hero?.secondaryCta
 	</section>
 
 	{events.length > 0 && <EventModals events={events} />}
+
 </BaseLayout>
