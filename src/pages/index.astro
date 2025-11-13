@@ -35,10 +35,12 @@ const mapQueryRaw = (import.meta.env.PUBLIC_GOOGLE_MAPS_QUERY ?? 'Yuma Territori
 const mapZoomParsed = Number.parseInt(import.meta.env.PUBLIC_GOOGLE_MAPS_ZOOM ?? '', 10);
 const mapZoom = Number.isFinite(mapZoomParsed) ? mapZoomParsed : 15;
 const isCoordinateQuery = /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(mapQueryRaw);
+const mapId = (import.meta.env.PUBLIC_GOOGLE_MAPS_MAP_ID ?? '').trim();
+const mapIdParam = mapId ? `&map_id=${encodeURIComponent(mapId)}` : '';
 const mapEmbedSrc = hasMapsKey
 	? isCoordinateQuery
-		? `https://www.google.com/maps/embed/v1/view?key=${import.meta.env.PUBLIC_GOOGLE_MAPS_KEY}&center=${encodeURIComponent(mapQueryRaw)}&zoom=${mapZoom}&maptype=roadmap`
-		: `https://www.google.com/maps/embed/v1/place?key=${import.meta.env.PUBLIC_GOOGLE_MAPS_KEY}&q=${encodeURIComponent(mapQueryRaw)}&zoom=${mapZoom}`
+		? `https://www.google.com/maps/embed/v1/view?key=${import.meta.env.PUBLIC_GOOGLE_MAPS_KEY}&center=${encodeURIComponent(mapQueryRaw)}&zoom=${mapZoom}&maptype=roadmap${mapIdParam}`
+		: `https://www.google.com/maps/embed/v1/place?key=${import.meta.env.PUBLIC_GOOGLE_MAPS_KEY}&q=${encodeURIComponent(mapQueryRaw)}&zoom=${mapZoom}${mapIdParam}`
 	: '';
 const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
