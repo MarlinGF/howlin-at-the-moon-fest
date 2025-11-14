@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import EventModals from '../components/EventModals.astro';
 import GalleryModals from '../components/GalleryModals.astro';
+import groundsMapScriptUrl from '../scripts/groundsMap.client.js?url';
 import { fetchFestivalContent } from '../lib/webeFriendsClient';
 
 const festival = await fetchFestivalContent();
@@ -34,14 +35,9 @@ const hasMapsKey = Boolean(import.meta.env.PUBLIC_GOOGLE_MAPS_KEY);
 const mapQueryRaw = (import.meta.env.PUBLIC_GOOGLE_MAPS_QUERY ?? 'Yuma Territorial Prison State Historic Park, Yuma AZ').trim();
 const mapZoomParsed = Number.parseInt(import.meta.env.PUBLIC_GOOGLE_MAPS_ZOOM ?? '', 10);
 const mapZoom = Number.isFinite(mapZoomParsed) ? mapZoomParsed : 15;
-const isCoordinateQuery = /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(mapQueryRaw);
 const mapId = (import.meta.env.PUBLIC_GOOGLE_MAPS_MAP_ID ?? '').trim();
-const mapIdParam = mapId ? `&map_id=${encodeURIComponent(mapId)}` : '';
-const mapEmbedSrc = hasMapsKey
-	? isCoordinateQuery
-		? `https://www.google.com/maps/embed/v1/view?key=${import.meta.env.PUBLIC_GOOGLE_MAPS_KEY}&center=${encodeURIComponent(mapQueryRaw)}&zoom=${mapZoom}&maptype=roadmap${mapIdParam}`
-		: `https://www.google.com/maps/embed/v1/place?key=${import.meta.env.PUBLIC_GOOGLE_MAPS_KEY}&q=${encodeURIComponent(mapQueryRaw)}&zoom=${mapZoom}${mapIdParam}`
-	: '';
+const mapPreferCloud = (import.meta.env.PUBLIC_GOOGLE_MAPS_USE_MAP_ID ?? '').trim().toLowerCase() === 'true';
+const mapLocationLabel = pageTitle;
 const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
 
@@ -305,24 +301,33 @@ const secondaryCta = hero?.secondaryCta
 					<h2 class="text-3xl font-semibold text-white sm:text-4xl">Festival Grounds Map</h2>
 				</div>
 			</header>
-			<div data-map-container class="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60">
-				<iframe
-					data-map-frame
-					title="Google Map of Howlin' At The Moon Festival grounds"
-					src="about:blank"
-					loading="lazy"
-					allowfullscreen
-					referrerpolicy="no-referrer-when-downgrade"
-					class="hidden h-[420px] w-full rounded-3xl"
-				></iframe>
+			<div
+				data-map-container
+				class={`relative overflow-hidden rounded-3xl border ${
+					hasMapsKey ? 'border-slate-800 bg-slate-900/60' : 'border-dashed border-slate-700 bg-slate-900/40'
+				}`}
+				data-map-key={hasMapsKey ? import.meta.env.PUBLIC_GOOGLE_MAPS_KEY : ''}
+				data-map-query={mapQueryRaw}
+				data-map-zoom={String(mapZoom)}
+				data-map-map-id={mapId}
+				data-map-use-cloud={mapPreferCloud && mapId ? 'true' : 'false'}
+				data-map-label={mapLocationLabel}
+			>
+				<div data-map-canvas class="hidden h-[420px] w-full"></div>
+				<div class="pointer-events-none absolute inset-0 hidden items-center justify-center bg-slate-950/85 text-sm font-semibold uppercase tracking-[0.35em] text-fuchsia-100" data-map-loading>
+					Loading map…
+				</div>
+				<div class="pointer-events-none absolute inset-0 hidden items-center justify-center bg-rose-900/80 text-center text-sm font-semibold text-rose-100" data-map-error>
+					We couldn’t load the live map. Please check your Google Maps configuration.
+				</div>
 				<button
 					type="button"
 					data-map-toggle
-					data-map-src={mapEmbedSrc}
-					class={`group relative flex h-[420px] w-full items-center justify-center overflow-hidden rounded-3xl border text-white transition ${
-						hasMapsKey ? 'border-slate-800 hover:border-fuchsia-400/70 hover:shadow-[0_0_35px_-10px_rgba(217,70,239,0.45)]' : 'border-dashed border-slate-700'
+					class={`group relative flex h-[420px] w-full items-center justify-center overflow-hidden text-white transition ${
+						hasMapsKey ? 'border border-slate-800 hover:border-fuchsia-400/70 hover:shadow-[0_0_35px_-10px_rgba(217,70,239,0.45)]' : 'border border-dashed border-slate-700'
 					}`}
 					style="cursor: pointer;"
+					disabled={!hasMapsKey}
 				>
 					<img
 						src={mapCoverImage}
@@ -341,47 +346,7 @@ const secondaryCta = hero?.secondaryCta
 				</p>
 			)}
 		</div>
-		<script is:inline>
-			const initGroundsMap = () => {
-				document.querySelectorAll('[data-map-container]').forEach((container) => {
-					if (container.hasAttribute('data-map-initialized')) {
-						return;
-					}
-					container.setAttribute('data-map-initialized', 'true');
-					const toggle = container.querySelector('[data-map-toggle]');
-					const frame = container.querySelector('iframe[data-map-frame]');
-					if (!toggle || !frame) {
-						return;
-					}
-					toggle.addEventListener(
-						'click',
-						() => {
-							const src = toggle.getAttribute('data-map-src');
-							if (!src) {
-								console.warn('Set PUBLIC_GOOGLE_MAPS_KEY to enable the embedded Google Map.');
-								return;
-							}
-							if (frame.getAttribute('src') !== src) {
-								frame.setAttribute('src', src);
-							}
-							frame.classList.remove('hidden');
-							frame.removeAttribute('hidden');
-							frame.style.removeProperty('display');
-							toggle.setAttribute('aria-hidden', 'true');
-							toggle.remove();
-						},
-						{ once: true }
-					);
-				});
-			};
-
-			if (document.readyState === 'loading') {
-				document.addEventListener('DOMContentLoaded', initGroundsMap, { once: true });
-			} else {
-				initGroundsMap();
-			}
-			document.addEventListener('astro:page-load', initGroundsMap);
-		</script>
+		<script type="module" src={groundsMapScriptUrl}></script>
 	</section>
 
 	{hasSchedule && (
