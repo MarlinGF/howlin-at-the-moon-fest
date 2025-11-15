@@ -1,5 +1,40 @@
-import dialogPolyfill from 'dialog-polyfill';
-import 'dialog-polyfill/dist/dialog-polyfill.css';
+const POLYFILL_MODULE_URL = 'https://esm.sh/dialog-polyfill@0.5.6?bundle';
+const POLYFILL_STYLES_URL = 'https://esm.sh/dialog-polyfill@0.5.6/dialog-polyfill.css';
+
+let polyfillPromise;
+
+const ensureStylesheet = () => {
+	if (document.querySelector('link[data-dialog-polyfill]')) {
+		return;
+	}
+	const link = document.createElement('link');
+	link.setAttribute('rel', 'stylesheet');
+	link.setAttribute('href', POLYFILL_STYLES_URL);
+	link.setAttribute('data-dialog-polyfill', 'true');
+	document.head.append(link);
+};
+
+const ensureDialogPolyfill = async () => {
+	if (typeof window === 'undefined') {
+		return null;
+	}
+	const supportsDialog = typeof HTMLDialogElement === 'function' && 'showModal' in HTMLDialogElement.prototype;
+	if (supportsDialog) {
+		return null;
+	}
+	if (!polyfillPromise) {
+		polyfillPromise = import(POLYFILL_MODULE_URL)
+			.then((module) => {
+				ensureStylesheet();
+				return module?.default ?? module;
+			})
+			.catch((error) => {
+				console.warn('Unable to load dialog-polyfill; gallery dialogs may not behave consistently in older browsers.', error);
+				return null;
+			});
+	}
+	return polyfillPromise;
+};
 
 const commentStore = new Map();
 
@@ -190,21 +225,22 @@ const closeDialog = (dialog) => {
 	}
 };
 
-const registerDialogs = (dialogs) => {
+const registerDialogs = async (dialogs) => {
+	const polyfill = await ensureDialogPolyfill();
 	dialogs.forEach((dialog) => {
 		if (dialog.hasAttribute('data-dialog-bound')) return;
 		dialog.setAttribute('data-dialog-bound', 'true');
-		if (dialogPolyfill && typeof dialogPolyfill.registerDialog === 'function') {
-			dialogPolyfill.registerDialog(dialog);
+		if (polyfill && typeof polyfill.registerDialog === 'function') {
+			polyfill.registerDialog(dialog);
 		}
 	});
 };
 
-const initGalleryModals = () => {
+const initGalleryModals = async () => {
 	ensureUserState();
 	const dialogs = Array.from(document.querySelectorAll('dialog[data-gallery-modal="true"]'));
 	if (dialogs.length === 0) return;
-	registerDialogs(dialogs);
+	await registerDialogs(dialogs);
 	dialogs.forEach((dialog) => {
 		const key = dialog.id;
 		const openers = document.querySelectorAll(`[data-gallery-target="${key}"]`);
@@ -239,7 +275,7 @@ const bootstrap = () => {
 	if (document.documentElement.hasAttribute('data-gallery-init')) return;
 	document.documentElement.setAttribute('data-gallery-init', 'true');
 	rerenderOnUserChange();
-	initGalleryModals();
+	void initGalleryModals();
 };
 
 if (document.readyState === 'loading') {
@@ -248,4 +284,6 @@ if (document.readyState === 'loading') {
 	bootstrap();
 }
 
-document.addEventListener('astro:page-load', initGalleryModals);
+document.addEventListener('astro:page-load', () => {
+	void initGalleryModals();
+});

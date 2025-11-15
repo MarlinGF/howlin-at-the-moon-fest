@@ -1,6 +1,4 @@
-import exportedGroundsMapStyle from '../lib/groundsMapStyle.json';
-
-const DEFAULT_DARK_STYLE = [
+const FESTIVAL_DARK_STYLE = [
 	{ elementType: 'geometry', stylers: [{ color: '#0b1120' }] },
 	{ elementType: 'labels.text.fill', stylers: [{ color: '#d1d5db' }] },
 	{ elementType: 'labels.text.stroke', stylers: [{ color: '#111827' }] },
@@ -17,11 +15,7 @@ const DEFAULT_DARK_STYLE = [
 let mapsPromise;
 let loadedMapIds = new Set();
 
-const DERIVED_DARK_STYLE = Array.isArray(exportedGroundsMapStyle?.styles)
-	? exportedGroundsMapStyle.styles
-	: Array.isArray(exportedGroundsMapStyle)
-		? exportedGroundsMapStyle
-		: DEFAULT_DARK_STYLE;
+const DERIVED_DARK_STYLE = FESTIVAL_DARK_STYLE;
 
 const ensureMapsSdk = (key, mapId, useMapId = false) => {
 	if (typeof window === 'undefined') {
