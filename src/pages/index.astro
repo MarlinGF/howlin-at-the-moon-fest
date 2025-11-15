@@ -39,6 +39,7 @@ const mapPreferCloud = (import.meta.env.PUBLIC_GOOGLE_MAPS_USE_MAP_ID ?? '').tri
 const mapLocationLabel = pageTitle;
 const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
+const groundsMapScriptUrl = new URL('../scripts/groundsMap.client.js', import.meta.url);
 
 const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
 const eventTimeFormatter = new Intl.DateTimeFormat('en-US', {
@@ -345,9 +346,7 @@ const secondaryCta = hero?.secondaryCta
 				</p>
 			)}
 		</div>
-		<script type="module">
-			import '../scripts/groundsMap.client.js';
-		</script>
+		<script type="module" src={groundsMapScriptUrl.href}></script>
 	</section>
 
 	{hasSchedule && (
