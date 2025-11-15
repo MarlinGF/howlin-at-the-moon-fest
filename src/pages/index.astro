@@ -2,7 +2,6 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import EventModals from '../components/EventModals.astro';
 import GalleryModals from '../components/GalleryModals.astro';
-import groundsMapScriptUrl from '../scripts/groundsMap.client.js?url';
 import { fetchFestivalContent } from '../lib/webeFriendsClient';
 
 const festival = await fetchFestivalContent();
@@ -346,7 +345,9 @@ const secondaryCta = hero?.secondaryCta
 				</p>
 			)}
 		</div>
-		<script type="module" src={groundsMapScriptUrl}></script>
+		<script type="module">
+			import '../scripts/groundsMap.client.js';
+		</script>
 	</section>
 
 	{hasSchedule && (
