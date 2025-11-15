@@ -35,11 +35,12 @@ const mapQueryRaw = (import.meta.env.PUBLIC_GOOGLE_MAPS_QUERY ?? 'Yuma Territori
 const mapZoomParsed = Number.parseInt(import.meta.env.PUBLIC_GOOGLE_MAPS_ZOOM ?? '', 10);
 const mapZoom = Number.isFinite(mapZoomParsed) ? mapZoomParsed : 15;
 const mapId = (import.meta.env.PUBLIC_GOOGLE_MAPS_MAP_ID ?? '').trim();
-const mapPreferCloud = (import.meta.env.PUBLIC_GOOGLE_MAPS_USE_MAP_ID ?? '').trim().toLowerCase() === 'true';
+const mapPreferCloud =
+ !import.meta.env.DEV && (import.meta.env.PUBLIC_GOOGLE_MAPS_USE_MAP_ID ?? '').trim().toLowerCase() === 'true';
 const mapLocationLabel = pageTitle;
 const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
-const groundsMapScriptUrl = new URL('../scripts/groundsMap.client.js', import.meta.url);
+const groundsMapScriptUrl = (await import('../scripts/groundsMap.client.js?url')).default;
 
 const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
 const eventTimeFormatter = new Intl.DateTimeFormat('en-US', {
@@ -346,7 +347,7 @@ const secondaryCta = hero?.secondaryCta
 				</p>
 			)}
 		</div>
-		<script type="module" src={groundsMapScriptUrl.href}></script>
+		<script type="module" src={groundsMapScriptUrl}></script>
 	</section>
 
 	{hasSchedule && (
