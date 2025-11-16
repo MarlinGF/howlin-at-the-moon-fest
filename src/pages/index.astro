@@ -41,6 +41,7 @@ const mapLocationLabel = pageTitle;
 const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
 const groundsMapScriptUrl = (await import('../scripts/groundsMap.client.js?url')).default;
+const scheduleCarouselScriptUrl = (await import('../scripts/scheduleCarousel.client.ts?url')).default;
 
 const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
 const eventTimeFormatter = new Intl.DateTimeFormat('en-US', {
@@ -291,6 +292,7 @@ const secondaryCta = hero?.secondaryCta
 				))}
 			</div>
 		</div>
+		<script type="module" src={scheduleCarouselScriptUrl}></script>
 		</section>
 	)}
 
@@ -359,9 +361,17 @@ const secondaryCta = hero?.secondaryCta
 					Remember Howlers — due to the unpredictable weather here in the foothills, all events are subject to change without notice. It's always best to check before heading out!
 				</p>
 			</header>
-			<div class="grid gap-6 lg:grid-cols-2">
-				{scheduleWithEvents.map((slot) => (
-					<div key={slot.dayLabel} class="flex flex-col gap-6 rounded-3xl border border-slate-800 bg-slate-900/60 p-8">
+			<div class="relative">
+				<div
+					class="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-2 lg:overflow-visible lg:pb-0 lg:snap-none"
+					data-schedule-carousel
+				>
+					{scheduleWithEvents.map((slot) => (
+						<div
+							key={slot.dayLabel}
+							class="flex min-w-[85vw] flex-shrink-0 snap-center flex-col gap-6 rounded-3xl border border-slate-800 bg-slate-900/60 p-8 transition-transform lg:min-w-0"
+							data-schedule-card
+						>
 						<div class="flex items-baseline justify-between gap-4">
 							<div>
 								<p class="text-xs font-semibold uppercase tracking-[0.4em] text-cyan-300/80">{slot.dateLabel}</p>
@@ -408,8 +418,8 @@ const secondaryCta = hero?.secondaryCta
 							)}
 						</ul>
 					</div>
-				))}
-			</div>
+					))}
+				</div>
 		</div>
 		</section>
 	)}
