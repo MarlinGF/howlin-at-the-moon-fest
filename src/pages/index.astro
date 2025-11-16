@@ -36,7 +36,7 @@ const mapZoomParsed = Number.parseInt(import.meta.env.PUBLIC_GOOGLE_MAPS_ZOOM ??
 const mapZoom = Number.isFinite(mapZoomParsed) ? mapZoomParsed : 15;
 const mapId = (import.meta.env.PUBLIC_GOOGLE_MAPS_MAP_ID ?? '').trim();
 const mapPreferCloud =
- !import.meta.env.DEV && (import.meta.env.PUBLIC_GOOGLE_MAPS_USE_MAP_ID ?? '').trim().toLowerCase() === 'true';
+	!import.meta.env.DEV && (import.meta.env.PUBLIC_GOOGLE_MAPS_USE_MAP_ID ?? '').trim().toLowerCase() === 'true';
 const mapLocationLabel = pageTitle;
 const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
@@ -255,44 +255,43 @@ const secondaryCta = hero?.secondaryCta
 
 	{hasHighlights && (
 		<section id="highlights" class="border-y border-slate-800 bg-slate-950/80">
-		<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-16">
-			<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-				<div>
-					<h2 class="mt-2 text-3xl font-semibold text-white sm:text-4xl">{nextHowlingHeading}</h2>
+			<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-16">
+				<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+					<div>
+						<h2 class="mt-2 text-3xl font-semibold text-white sm:text-4xl">{nextHowlingHeading}</h2>
+					</div>
+				</div>
+				<div class="grid gap-6 sm:grid-cols-2 sm:justify-items-center">
+					{featuredEvents.map((event) => (
+						<button
+							key={event.id}
+							type="button"
+							class="group relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 text-left transition hover:border-fuchsia-400/70 hover:shadow-fuchsia-500/20"
+							data-open-modal={`modal-${event.id}`}
+						>
+							<img
+								src={event.image.src}
+								alt={event.image.alt}
+								class="h-48 w-full object-cover object-center transition duration-500 group-hover:scale-105"
+							/>
+							<div class="flex flex-col gap-3 p-6">
+								<p class="text-xs font-semibold uppercase tracking-[0.4em] text-fuchsia-300/90">{event.stage}</p>
+								<h3 class="text-xl font-semibold text-white">{event.title}</h3>
+								<p class="text-sm text-slate-300">
+									{formatEventTime(event.start)} • {event.dayLabel}
+								</p>
+								<div class="flex flex-wrap gap-2">
+									{event.tags.map((tag) => (
+										<span key={tag} class="rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-200">
+											{tag.replace('-', ' ')}
+										</span>
+									))}
+								</div>
+							</div>
+						</button>
+					))}
 				</div>
 			</div>
-			<div class="grid gap-6 sm:grid-cols-2 sm:justify-items-center">
-				{featuredEvents.map((event) => (
-					<button
-						key={event.id}
-						type="button"
-						class="group relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 text-left transition hover:border-fuchsia-400/70 hover:shadow-fuchsia-500/20"
-						data-open-modal={`modal-${event.id}`}
-					>
-						<img
-							src={event.image.src}
-							alt={event.image.alt}
-							class="h-48 w-full object-cover object-center transition duration-500 group-hover:scale-105"
-						/>
-						<div class="flex flex-col gap-3 p-6">
-							<p class="text-xs font-semibold uppercase tracking-[0.4em] text-fuchsia-300/90">{event.stage}</p>
-							<h3 class="text-xl font-semibold text-white">{event.title}</h3>
-							<p class="text-sm text-slate-300">
-								{formatEventTime(event.start)} • {event.dayLabel}
-							</p>
-							<div class="flex flex-wrap gap-2">
-								{event.tags.map((tag) => (
-									<span key={tag} class="rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-200">
-										{tag.replace('-', ' ')}
-									</span>
-								))}
-							</div>
-						</div>
-					</button>
-				))}
-			</div>
-		</div>
-		<script type="module" src={scheduleCarouselScriptUrl}></script>
 		</section>
 	)}
 
@@ -366,60 +365,77 @@ const secondaryCta = hero?.secondaryCta
 					class="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-2 lg:overflow-visible lg:pb-0 lg:snap-none"
 					data-schedule-carousel
 				>
-					{scheduleWithEvents.map((slot) => (
-						<div
-							key={slot.dayLabel}
-							class="flex min-w-[85vw] flex-shrink-0 snap-center flex-col gap-6 rounded-3xl border border-slate-800 bg-slate-900/60 p-8 transition-transform lg:min-w-0"
-							data-schedule-card
-						>
-						<div class="flex items-baseline justify-between gap-4">
-							<div>
-								<p class="text-xs font-semibold uppercase tracking-[0.4em] text-cyan-300/80">{slot.dateLabel}</p>
-								<h3 class="text-2xl font-semibold text-white">{slot.dayLabel}</h3>
+					{scheduleWithEvents.map((slot, index) => {
+						const isAdditionalSlot = index >= 3;
+						return (
+							<div
+								key={`${slot.dateLabel}-${slot.dayLabel}`}
+								class={`flex min-w-[85vw] flex-shrink-0 snap-center flex-col gap-6 rounded-3xl border border-slate-800 bg-slate-900/60 p-8 transition-transform lg:min-w-0 ${isAdditionalSlot ? 'hidden lg:flex' : ''}`}
+								data-schedule-card
+								data-mobile-hidden={isAdditionalSlot ? 'true' : 'false'}
+							>
+								<div class="flex items-baseline justify-between gap-4">
+									<div>
+										<p class="text-xs font-semibold uppercase tracking-[0.4em] text-cyan-300/80">{slot.dateLabel}</p>
+										<h3 class="text-2xl font-semibold text-white">{slot.dayLabel}</h3>
+									</div>
+									<p class="text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">Gates {slot.gatesOpen}</p>
+								</div>
+								<ul class="space-y-4">
+									{slot.events.length > 0 ? (
+										slot.events.map((event) => (
+											<li key={event.id} class="flex flex-col gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 transition hover:border-fuchsia-400/70">
+												<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+													<div>
+														<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">{event.stage}</p>
+														<h4 class="text-lg font-semibold text-white">{event.title}</h4>
+													</div>
+													<div class="flex flex-col items-start text-sm font-medium text-slate-200 sm:items-end sm:text-right">
+														<span>
+															{formatEventTime(event.start)}
+															<span class="mx-2 text-slate-500">–</span>
+															{formatEventTime(event.end)}
+														</span>
+														<span class="mt-1 text-xs font-normal text-slate-500/80">The shows usually end 30-45 minutes after the moon rises.</span>
+													</div>
+												</div>
+												<div class="flex flex-wrap gap-3 text-sm text-slate-300">
+													<span class="rounded-full bg-emerald-500/20 px-3 py-1">
+														{event.area}
+													</span>
+													<button
+														type="button"
+														class="rounded-full border border-slate-600/70 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-slate-100 transition hover:border-fuchsia-400 hover:text-white"
+														data-open-modal={`modal-${event.id}`}
+													>
+														Details
+													</button>
+												</div>
+											</li>
+										))
+									) : (
+										<li class="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-sm text-slate-400">
+											Set list coming soon. Check back once new events are assigned in WeBeFriends.
+										</li>
+									)}
+								</ul>
 							</div>
-							<p class="text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">Gates {slot.gatesOpen}</p>
-						</div>
-						<ul class="space-y-4">
-							{slot.events.length > 0 ? (
-								slot.events.map((event) => (
-									<li key={event.id} class="flex flex-col gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 transition hover:border-fuchsia-400/70">
-										<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-											<div>
-												<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">{event.stage}</p>
-												<h4 class="text-lg font-semibold text-white">{event.title}</h4>
-											</div>
-											<div class="flex flex-col items-start text-sm font-medium text-slate-200 sm:items-end sm:text-right">
-												<span>
-													{formatEventTime(event.start)}
-													<span class="mx-2 text-slate-500">–</span>
-													{formatEventTime(event.end)}
-												</span>
-												<span class="mt-1 text-xs font-normal text-slate-500/80">The shows usually end 30-45 minutes after the moon rises.</span>
-											</div>
-										</div>
-										<div class="flex flex-wrap gap-3 text-sm text-slate-300">
-											<span class="rounded-full bg-emerald-500/20 px-3 py-1">
-												{event.area}
-											</span>
-											<button
-												type="button"
-												class="rounded-full border border-slate-600/70 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-slate-100 transition hover:border-fuchsia-400 hover:text-white"
-												data-open-modal={`modal-${event.id}`}
-											>
-												Details
-											</button>
-										</div>
-									</li>
-								))
-							) : (
-								<li class="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-sm text-slate-400">
-									Set list coming soon. Check back once new events are assigned in WeBeFriends.
-								</li>
-							)}
-						</ul>
-					</div>
-					))}
+						);
+					})}
 				</div>
+				{scheduleWithEvents.length > 3 && (
+					<div class="mt-4 flex justify-center lg:hidden">
+						<button
+							type="button"
+							class="inline-flex items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 px-6 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-slate-100 transition hover:border-fuchsia-400 hover:text-white"
+							data-schedule-show-more
+						>
+							See more
+						</button>
+					</div>
+				)}
+			</div>
+			<script type="module" src={scheduleCarouselScriptUrl}></script>
 		</div>
 		</section>
 	)}

@@ -9,19 +9,35 @@ const initCarousel = (container: HTMLElement) => {
 		return;
 	}
 
-	const items = Array.from(container.querySelectorAll<HTMLElement>(CARD_SELECTOR));
-	if (items.length <= 1) {
-		container.dataset.carouselInitialized = 'true';
-		return;
-	}
-
 	container.dataset.carouselInitialized = 'true';
 
 	const mediaQuery = window.matchMedia(DESKTOP_QUERY);
+	const showMoreButton = container.parentElement?.querySelector<HTMLButtonElement>('[data-schedule-show-more]') ?? null;
+	let items: HTMLElement[] = [];
 	let currentIndex = 0;
 	let autoScrollId: number | undefined;
 	let restartTimeoutId: number | undefined;
 	let scrollUpdateId: number | undefined;
+
+	const resolveVisibleItems = () =>
+		Array.from(container.querySelectorAll<HTMLElement>(CARD_SELECTOR)).filter((item) => {
+			const rect = item.getBoundingClientRect();
+			return rect.width > 0 && rect.height > 0;
+		});
+
+	const refreshItems = () => {
+		items = resolveVisibleItems();
+		if (items.length === 0) {
+			currentIndex = 0;
+			return;
+		}
+		if (currentIndex >= items.length) {
+			currentIndex = items.length - 1;
+		}
+		if (currentIndex < 0) {
+			currentIndex = 0;
+		}
+	};
 
 	const clearAutoScroll = () => {
 		if (autoScrollId !== undefined) {
@@ -38,11 +54,16 @@ const initCarousel = (container: HTMLElement) => {
 	};
 
 	const goToIndex = (index: number) => {
-		const target = items[index];
+		refreshItems();
+		if (items.length === 0) {
+			return;
+		}
+		const normalizedIndex = ((index % items.length) + items.length) % items.length;
+		const target = items[normalizedIndex];
 		if (!target) {
 			return;
 		}
-		currentIndex = index;
+		currentIndex = normalizedIndex;
 		const offset = target.offsetLeft - container.offsetLeft;
 		container.scrollTo({ left: offset, behavior: 'smooth' });
 	};
@@ -50,11 +71,17 @@ const initCarousel = (container: HTMLElement) => {
 	const startAutoScroll = () => {
 		clearAutoScroll();
 		clearRestart();
-		if (mediaQuery.matches) {
+		refreshItems();
+		if (mediaQuery.matches || items.length <= 1) {
 			return;
 		}
 		autoScrollId = window.setInterval(() => {
 			if (mediaQuery.matches) {
+				clearAutoScroll();
+				return;
+			}
+			refreshItems();
+			if (items.length <= 1) {
 				clearAutoScroll();
 				return;
 			}
@@ -75,6 +102,10 @@ const initCarousel = (container: HTMLElement) => {
 	};
 
 	const updateIndexFromScroll = () => {
+		refreshItems();
+		if (items.length === 0) {
+			return;
+		}
 		const center = container.scrollLeft + container.clientWidth / 2;
 		let bestIndex = currentIndex;
 		let bestDistance = Number.POSITIVE_INFINITY;
@@ -123,11 +154,34 @@ const initCarousel = (container: HTMLElement) => {
 	const handleMediaChange = () => {
 		clearAutoScroll();
 		clearRestart();
+		refreshItems();
 		if (mediaQuery.matches) {
 			currentIndex = 0;
 			container.scrollTo({ left: 0, behavior: 'auto' });
 		} else {
 			restartAutoScroll();
+		}
+	};
+
+	const revealAdditionalCards = () => {
+		const hiddenCards = Array.from(
+			container.querySelectorAll<HTMLElement>(`${CARD_SELECTOR}[data-mobile-hidden="true"]`)
+		);
+		if (hiddenCards.length === 0) {
+			return;
+		}
+		hiddenCards.forEach((card) => {
+			card.dataset.mobileHidden = 'false';
+			card.classList.remove('hidden');
+			if (!card.classList.contains('flex')) {
+				card.classList.add('flex');
+			}
+		});
+		refreshItems();
+		restartAutoScroll();
+		if (showMoreButton) {
+			showMoreButton.classList.add('hidden');
+			showMoreButton.setAttribute('aria-hidden', 'true');
 		}
 	};
 
@@ -155,8 +209,12 @@ const initCarousel = (container: HTMLElement) => {
 	container.addEventListener('touchend', handleInteractionEnd, { passive: true });
 	document.addEventListener('visibilitychange', handleVisibilityChange);
 	mediaQuery.addEventListener('change', handleMediaChange);
+	showMoreButton?.addEventListener('click', revealAdditionalCards, { once: true });
 
-	startAutoScroll();
+	refreshItems();
+	if (items.length > 1) {
+		startAutoScroll();
+	}
 
 	const cleanup = () => {
 		clearAutoScroll();
@@ -173,6 +231,7 @@ const initCarousel = (container: HTMLElement) => {
 		document.removeEventListener('visibilitychange', handleVisibilityChange);
 		mediaQuery.removeEventListener('change', handleMediaChange);
 		intersectionObserver.disconnect();
+		showMoreButton?.removeEventListener('click', revealAdditionalCards);
 	};
 
 	container.addEventListener(
