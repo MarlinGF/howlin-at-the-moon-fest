@@ -298,7 +298,6 @@ const secondaryCta = hero?.secondaryCta
 		<div class="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-20">
 			<header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 				<div>
-					<p class="text-xs font-semibold uppercase tracking-[0.4em] text-cyan-300/80">Find Your Campsite</p>
 					<h2 class="text-3xl font-semibold text-white sm:text-4xl">Festival Grounds Map</h2>
 				</div>
 			</header>
@@ -354,7 +353,7 @@ const secondaryCta = hero?.secondaryCta
 		<section id="schedule" class="bg-slate-950/90">
 		<div class="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-20">
 			<header class="flex flex-col gap-4">
-				<p class="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-300/80">Nightly Flow</p>
+				<p class="text-xs font-semibold uppercase tracking-[0.4em] text-emerald-300/80">See Our Events</p>
 				<h2 class="text-3xl font-semibold text-white sm:text-4xl">Full Season Schedule</h2>
 				<p class="max-w-3xl text-sm text-slate-300 sm:text-base">
 					Remember Howlers — due to the unpredictable weather here in the foothills, all events are subject to change without notice. It's always best to check before heading out!
@@ -379,11 +378,14 @@ const secondaryCta = hero?.secondaryCta
 												<p class="text-xs font-semibold uppercase tracking-[0.4em] text-slate-400">{event.stage}</p>
 												<h4 class="text-lg font-semibold text-white">{event.title}</h4>
 											</div>
-											<p class="text-sm font-medium text-slate-200">
-												{formatEventTime(event.start)}
-												<span class="mx-2 text-slate-500">–</span>
-												{formatEventTime(event.end)}
-											</p>
+											<div class="flex flex-col items-start text-sm font-medium text-slate-200 sm:items-end sm:text-right">
+												<span>
+													{formatEventTime(event.start)}
+													<span class="mx-2 text-slate-500">–</span>
+													{formatEventTime(event.end)}
+												</span>
+												<span class="mt-1 text-xs font-normal text-slate-500/80">The shows usually end 30-45 minutes after the moon rises.</span>
+											</div>
 										</div>
 										<div class="flex flex-wrap gap-3 text-sm text-slate-300">
 											<span class="rounded-full bg-emerald-500/20 px-3 py-1">
