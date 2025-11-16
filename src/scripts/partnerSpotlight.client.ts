@@ -20,8 +20,10 @@ const initSpotlight = () => {
 
 	card.dataset.partnerSpotlightInitialized = 'true';
 
+	let setExpandedState: ((expanded: boolean) => void) | undefined;
+
 	if (details && toggle) {
-		const setExpandedState = (expanded: boolean) => {
+		setExpandedState = (expanded: boolean) => {
 			details.hidden = !expanded;
 			toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
 			toggle.textContent = expanded ? 'Show less' : 'Read more';
@@ -31,12 +33,13 @@ const initSpotlight = () => {
 
 		toggle.addEventListener('click', () => {
 			const expanded = toggle.getAttribute('aria-expanded') === 'true';
-			setExpandedState(!expanded);
+			setExpandedState?.(!expanded);
 		});
 	}
 
 	const moveToFooter = () => {
 		dismissButton.remove();
+		setExpandedState?.(false);
 		footerTarget.appendChild(card);
 	};
 
