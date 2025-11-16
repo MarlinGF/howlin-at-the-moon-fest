@@ -23,7 +23,7 @@ const ensureDialogPolyfill = async () => {
 		return null;
 	}
 	if (!polyfillPromise) {
-		polyfillPromise = import(POLYFILL_MODULE_URL)
+		polyfillPromise = import(/* @vite-ignore */ POLYFILL_MODULE_URL)
 			.then((module) => {
 				ensureStylesheet();
 				return module?.default ?? module;
