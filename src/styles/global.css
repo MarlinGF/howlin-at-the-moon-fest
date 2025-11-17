@@ -11,3 +11,41 @@ dialog[data-event-modal="true"]::backdrop {
 	background-color: rgba(2, 6, 23, 0.85);
 	backdrop-filter: blur(12px);
 }
+
+
+.partner-card--footer {
+	margin: 2rem auto 0;
+	width: 100%;
+	max-width: 48rem;
+	border: 1px solid rgba(30, 41, 59, 0.8);
+	background-color: rgba(2, 6, 23, 0.7);
+	padding: 1.5rem;
+	box-shadow: 0 0 25px -18px rgba(15, 23, 42, 0.75);
+}
+
+.partner-card--footer .partner-card__details {
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid rgba(30, 41, 59, 0.6);
+}
+
+.partner-card__footer-teaser {
+	color: rgba(203, 213, 225, 0.9);
+}
+
+[data-partner-footer-target][data-partner-footer-state="with-card"] {
+	gap: 1.5rem;
+}
+
+[data-partner-footer-target][data-partner-footer-state="with-card"] {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+
+@media (min-width: 768px) {
+	[data-partner-footer-target][data-partner-footer-state="with-card"] {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}
