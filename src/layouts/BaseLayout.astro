@@ -39,7 +39,32 @@ const {
 			<div class="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-10 text-sm text-slate-400 md:flex-row md:items-center md:justify-between" data-partner-footer-target>
 				<p>&copy; {new Date().getFullYear()} Howlin' At The Moon Fest. All rights reserved.</p>
 				<p>Made in Yuma with stardust and community.</p>
+				<p class="text-xs text-slate-500" data-hit-counter aria-label="Site visit counter">
+					Visitors: —
+				</p>
 			</div>
 		</footer>
+		<script type="module">
+			const counter = document.querySelector('[data-hit-counter]');
+			if (counter) {
+				const revealCounter = (value) => {
+					counter.textContent = `Visitors: ${value.toLocaleString()}`;
+				};
+				const showUnavailable = () => {
+					counter.textContent = 'Visitors: unavailable';
+				};
+				fetch('https://api.countapi.xyz/hit/howlin-build/site-visits')
+					.then((response) => (response.ok ? response.json() : Promise.reject()))
+					.then((data) => {
+						const count = Number.parseInt(data?.value, 10);
+						if (Number.isFinite(count)) {
+							revealCounter(count);
+						} else {
+							showUnavailable();
+						}
+					})
+					.catch(showUnavailable);
+			}
+		</script>
 	</body>
 </html>
