@@ -7,18 +7,18 @@ const PARTNER_SUMMARY_SELECTOR = '[data-partner-summary]';
 const PARTNER_FOOTER_TEASER_SELECTOR = '[data-partner-footer-teaser]';
 
 const initSpotlight = () => {
-	const card = document.querySelector<HTMLElement>(PARTNER_CARD_SELECTOR);
-	if (!card || card.dataset.partnerSpotlightInitialized === 'true') {
+	const card = document.querySelector(PARTNER_CARD_SELECTOR);
+	if (!(card instanceof HTMLElement) || card.dataset.partnerSpotlightInitialized === 'true') {
 		return;
 	}
 
-	const dismissButton = card.querySelector<HTMLButtonElement>(PARTNER_DISMISS_SELECTOR);
-	const footerTarget = document.querySelector<HTMLElement>(FOOTER_TARGET_SELECTOR);
-	const details = card.querySelector<HTMLElement>(PARTNER_DETAILS_SELECTOR);
-	const toggle = card.querySelector<HTMLButtonElement>(PARTNER_TOGGLE_SELECTOR);
-	const summary = card.querySelector<HTMLElement>(PARTNER_SUMMARY_SELECTOR);
-	const footerTeaser = card.querySelector<HTMLElement>(PARTNER_FOOTER_TEASER_SELECTOR);
-	if (!dismissButton || !footerTarget) {
+	const dismissButton = card.querySelector(PARTNER_DISMISS_SELECTOR);
+	const footerTarget = document.querySelector(FOOTER_TARGET_SELECTOR);
+	const details = card.querySelector(PARTNER_DETAILS_SELECTOR);
+	const toggle = card.querySelector(PARTNER_TOGGLE_SELECTOR);
+	const summary = card.querySelector(PARTNER_SUMMARY_SELECTOR);
+	const footerTeaser = card.querySelector(PARTNER_FOOTER_TEASER_SELECTOR);
+	if (!(dismissButton instanceof HTMLElement) || !(footerTarget instanceof HTMLElement)) {
 		return;
 	}
 
@@ -29,37 +29,37 @@ const initSpotlight = () => {
 
 	let expanded = false;
 	let movedToFooter = false;
-	let observer: IntersectionObserver | undefined;
+	let observer;
 
 	const updateContentState = () => {
 		const placement = card.dataset.partnerPlacement ?? 'hero';
 		const inFooter = placement === 'footer';
 
-		if (footerTeaser) {
+		if (footerTeaser instanceof HTMLElement) {
 			footerTeaser.hidden = !(inFooter && !expanded);
 		}
 
-		if (summary) {
+		if (summary instanceof HTMLElement) {
 			summary.hidden = Boolean(inFooter && !expanded);
 		}
 
-		if (details) {
+		if (details instanceof HTMLElement) {
 			details.hidden = !expanded;
 		}
 
-		if (toggle) {
+		if (toggle instanceof HTMLElement) {
 			toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
 			toggle.textContent = expanded ? 'Show less' : 'Read more';
 			toggle.dataset.partnerTogglePlacement = inFooter ? 'footer' : 'hero';
 		}
 	};
 
-	const setExpandedState = (nextExpanded: boolean) => {
+	const setExpandedState = (nextExpanded) => {
 		expanded = nextExpanded;
 		updateContentState();
 	};
 
-	if (toggle) {
+	if (toggle instanceof HTMLElement) {
 		toggle.addEventListener('click', () => {
 			const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
 			setExpandedState(!isExpanded);
@@ -67,6 +67,16 @@ const initSpotlight = () => {
 	}
 
 	setExpandedState(false);
+
+	const resolveDismissTrigger = (eventTarget) => {
+		if (eventTarget instanceof Element) {
+			return eventTarget.closest(PARTNER_DISMISS_SELECTOR);
+		}
+		if (eventTarget instanceof Text && eventTarget.parentElement) {
+			return eventTarget.parentElement.closest(PARTNER_DISMISS_SELECTOR);
+		}
+		return null;
+	};
 
 	const moveToFooter = () => {
 		if (movedToFooter) {
@@ -80,29 +90,21 @@ const initSpotlight = () => {
 		footerTarget.dataset.partnerFooterState = 'with-card';
 		setExpandedState(false);
 		footerTarget.insertBefore(card, footerTarget.firstChild);
-		observer?.disconnect();
+		if (observer) {
+			observer.disconnect();
+		}
 		card.removeEventListener('click', handleCardClick);
 		card.removeEventListener('keydown', handleCardKeydown);
 	};
 
-	const resolveDismissTrigger = (eventTarget: EventTarget | null): Element | null => {
-		if (eventTarget instanceof Element) {
-			return eventTarget.closest(PARTNER_DISMISS_SELECTOR);
-		}
-		if (eventTarget instanceof Text && eventTarget.parentElement) {
-			return eventTarget.parentElement.closest(PARTNER_DISMISS_SELECTOR);
-		}
-		return null;
-	};
-
-	const handleCardClick = (event: MouseEvent) => {
+	const handleCardClick = (event) => {
 		if (resolveDismissTrigger(event.target)) {
 			event.preventDefault();
 			moveToFooter();
 		}
 	};
 
-	const handleCardKeydown = (event: KeyboardEvent) => {
+	const handleCardKeydown = (event) => {
 		if (resolveDismissTrigger(event.target)) {
 			if (event.key === 'Enter' || event.key === ' ') {
 				event.preventDefault();
@@ -132,7 +134,9 @@ const initSpotlight = () => {
 		() => {
 			card.removeEventListener('click', handleCardClick);
 			card.removeEventListener('keydown', handleCardKeydown);
-			observer?.disconnect();
+			if (observer) {
+				observer.disconnect();
+			}
 		},
 		{ once: true }
 	);

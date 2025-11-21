@@ -41,6 +41,9 @@ const mapLocationLabel = pageTitle;
 const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
 const groundsMapScriptUrl = (await import('../scripts/groundsMap.client.js?url')).default;
+const partnerSpotlightScriptUrl = (await import('../scripts/partnerSpotlight.client.js?url')).default;
+const scheduleCarouselScriptUrl = (await import('../scripts/scheduleCarousel.client.js?url')).default;
+const galleryRevealScriptUrl = (await import('../scripts/galleryReveal.client.js?url')).default;
 
 const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
 const eventTimeFormatter = new Intl.DateTimeFormat('en-US', {
@@ -270,9 +273,7 @@ if (nextEventDaysSlice.length === 1) {
 				</div>
 			</div>
 		</section>
-		<script type="module">
-			import '/src/scripts/partnerSpotlight.client.ts';
-		</script>
+		<script type="module" src={partnerSpotlightScriptUrl}></script>
 	)}
 
 	{hasHighlights && (
@@ -457,9 +458,7 @@ if (nextEventDaysSlice.length === 1) {
 					</div>
 				)}
 			</div>
-			<script type="module">
-				import '/src/scripts/scheduleCarousel.client.ts';
-			</script>
+			<script type="module" src={scheduleCarouselScriptUrl}></script>
 		</div>
 		</section>
 	)}
@@ -526,9 +525,7 @@ if (nextEventDaysSlice.length === 1) {
 						</button>
 					</div>
 				)}
-				<script type="module">
-					import '/src/scripts/galleryReveal.client.ts';
-				</script>
+				<script type="module" src={galleryRevealScriptUrl}></script>
 		</div>
 		</section>
 	)}

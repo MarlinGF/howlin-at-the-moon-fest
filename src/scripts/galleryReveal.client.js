@@ -2,13 +2,17 @@ const GRID_SELECTOR = '[data-gallery-grid]';
 const ITEM_SELECTOR = '[data-gallery-item]';
 const SHOW_MORE_SELECTOR = '[data-gallery-show-more]';
 
-const initGrid = (grid: HTMLElement) => {
+const initGrid = (grid) => {
+	if (!(grid instanceof HTMLElement)) {
+		return;
+	}
+
 	if (grid.dataset.galleryRevealInitialized === 'true') {
 		return;
 	}
 
-	const showMoreButton = grid.parentElement?.querySelector<HTMLButtonElement>(SHOW_MORE_SELECTOR) ?? null;
-	if (!showMoreButton) {
+	const showMoreButton = grid.parentElement?.querySelector(SHOW_MORE_SELECTOR) ?? null;
+	if (!(showMoreButton instanceof HTMLElement)) {
 		return;
 	}
 
@@ -16,13 +20,16 @@ const initGrid = (grid: HTMLElement) => {
 
 	const revealHiddenItems = () => {
 		const hiddenItems = Array.from(
-			grid.querySelectorAll<HTMLElement>(`${ITEM_SELECTOR}[data-gallery-mobile-hidden="true"]`)
+			grid.querySelectorAll(`${ITEM_SELECTOR}[data-gallery-mobile-hidden="true"]`)
 		);
 		if (hiddenItems.length === 0) {
 			return;
 		}
 
 		hiddenItems.forEach((item) => {
+			if (!(item instanceof HTMLElement)) {
+				return;
+			}
 			item.classList.remove('hidden');
 			if (!item.classList.contains('block') && !item.classList.contains('flex')) {
 				item.classList.add('block');
@@ -50,9 +57,11 @@ const initGrid = (grid: HTMLElement) => {
 };
 
 const initAllGrids = () => {
-	const grids = Array.from(document.querySelectorAll<HTMLElement>(GRID_SELECTOR));
+	const grids = Array.from(document.querySelectorAll(GRID_SELECTOR));
 	grids.forEach((grid) => {
-		initGrid(grid);
+		if (grid instanceof HTMLElement) {
+			initGrid(grid);
+		}
 	});
 };
 

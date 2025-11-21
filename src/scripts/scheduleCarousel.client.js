@@ -4,7 +4,11 @@ const DESKTOP_QUERY = '(min-width: 1024px)';
 const AUTO_SCROLL_INTERVAL = 5000;
 const RESTART_DELAY = 2000;
 
-const initCarousel = (container: HTMLElement) => {
+const initCarousel = (container) => {
+	if (!(container instanceof HTMLElement)) {
+		return;
+	}
+
 	if (container.dataset.carouselInitialized === 'true') {
 		return;
 	}
@@ -12,15 +16,18 @@ const initCarousel = (container: HTMLElement) => {
 	container.dataset.carouselInitialized = 'true';
 
 	const mediaQuery = window.matchMedia(DESKTOP_QUERY);
-	const showMoreButton = container.parentElement?.querySelector<HTMLButtonElement>('[data-schedule-show-more]') ?? null;
-	let items: HTMLElement[] = [];
+	const showMoreButton = container.parentElement?.querySelector('[data-schedule-show-more]') ?? null;
+	let items = [];
 	let currentIndex = 0;
-	let autoScrollId: number | undefined;
-	let restartTimeoutId: number | undefined;
-	let scrollUpdateId: number | undefined;
+	let autoScrollId;
+	let restartTimeoutId;
+	let scrollUpdateId;
 
 	const resolveVisibleItems = () =>
-		Array.from(container.querySelectorAll<HTMLElement>(CARD_SELECTOR)).filter((item) => {
+		Array.from(container.querySelectorAll(CARD_SELECTOR)).filter((item) => {
+			if (!(item instanceof HTMLElement)) {
+				return false;
+			}
 			const rect = item.getBoundingClientRect();
 			return rect.width > 0 && rect.height > 0;
 		});
@@ -53,14 +60,14 @@ const initCarousel = (container: HTMLElement) => {
 		}
 	};
 
-	const goToIndex = (index: number) => {
+	const goToIndex = (index) => {
 		refreshItems();
 		if (items.length === 0) {
 			return;
 		}
 		const normalizedIndex = ((index % items.length) + items.length) % items.length;
 		const target = items[normalizedIndex];
-		if (!target) {
+		if (!(target instanceof HTMLElement)) {
 			return;
 		}
 		currentIndex = normalizedIndex;
@@ -110,6 +117,9 @@ const initCarousel = (container: HTMLElement) => {
 		let bestIndex = currentIndex;
 		let bestDistance = Number.POSITIVE_INFINITY;
 		items.forEach((item, index) => {
+			if (!(item instanceof HTMLElement)) {
+				return;
+			}
 			const itemCenter = item.offsetLeft - container.offsetLeft + item.offsetWidth / 2;
 			const distance = Math.abs(itemCenter - center);
 			if (distance < bestDistance) {
@@ -165,12 +175,15 @@ const initCarousel = (container: HTMLElement) => {
 
 	const revealAdditionalCards = () => {
 		const hiddenCards = Array.from(
-			container.querySelectorAll<HTMLElement>(`${CARD_SELECTOR}[data-mobile-hidden="true"]`)
+			container.querySelectorAll(`${CARD_SELECTOR}[data-mobile-hidden="true"]`)
 		);
 		if (hiddenCards.length === 0) {
 			return;
 		}
 		hiddenCards.forEach((card) => {
+			if (!(card instanceof HTMLElement)) {
+				return;
+			}
 			card.dataset.mobileHidden = 'false';
 			card.classList.remove('hidden');
 			if (!card.classList.contains('flex')) {
@@ -179,7 +192,7 @@ const initCarousel = (container: HTMLElement) => {
 		});
 		refreshItems();
 		restartAutoScroll();
-		if (showMoreButton) {
+		if (showMoreButton instanceof HTMLElement) {
 			showMoreButton.classList.add('hidden');
 			showMoreButton.setAttribute('aria-hidden', 'true');
 		}
@@ -244,9 +257,11 @@ const initCarousel = (container: HTMLElement) => {
 };
 
 const initAllCarousels = () => {
-	const containers = Array.from(document.querySelectorAll<HTMLElement>(CAROUSEL_SELECTOR));
+	const containers = Array.from(document.querySelectorAll(CAROUSEL_SELECTOR));
 	containers.forEach((container) => {
-		initCarousel(container);
+		if (container instanceof HTMLElement) {
+			initCarousel(container);
+		}
 	});
 };
 
@@ -257,3 +272,5 @@ if (document.readyState === 'loading') {
 }
 
 document.addEventListener('astro:page-load', initAllCarousels);
+
+export {};
