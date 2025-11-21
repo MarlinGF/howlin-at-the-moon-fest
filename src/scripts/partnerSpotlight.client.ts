@@ -81,22 +81,38 @@ const initSpotlight = () => {
 		setExpandedState(false);
 		footerTarget.insertBefore(card, footerTarget.firstChild);
 		observer?.disconnect();
+		card.removeEventListener('click', handleCardClick);
+		card.removeEventListener('keydown', handleCardKeydown);
 	};
 
-	const handleDismissClick = (event: MouseEvent) => {
-		event.preventDefault();
-		moveToFooter();
+	const resolveDismissTrigger = (eventTarget: EventTarget | null): Element | null => {
+		if (eventTarget instanceof Element) {
+			return eventTarget.closest(PARTNER_DISMISS_SELECTOR);
+		}
+		if (eventTarget instanceof Text && eventTarget.parentElement) {
+			return eventTarget.parentElement.closest(PARTNER_DISMISS_SELECTOR);
+		}
+		return null;
 	};
 
-	const handleDismissKeydown = (event: KeyboardEvent) => {
-		if (event.key === 'Enter' || event.key === ' ') {
+	const handleCardClick = (event: MouseEvent) => {
+		if (resolveDismissTrigger(event.target)) {
 			event.preventDefault();
 			moveToFooter();
 		}
 	};
 
-	dismissButton.addEventListener('click', handleDismissClick);
-	dismissButton.addEventListener('keydown', handleDismissKeydown);
+	const handleCardKeydown = (event: KeyboardEvent) => {
+		if (resolveDismissTrigger(event.target)) {
+			if (event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				moveToFooter();
+			}
+		}
+	};
+
+	card.addEventListener('click', handleCardClick);
+	card.addEventListener('keydown', handleCardKeydown);
 
 	observer = new IntersectionObserver(
 		(entries) => {
@@ -114,8 +130,8 @@ const initSpotlight = () => {
 	card.addEventListener(
 		'astro:before-swap',
 		() => {
-			dismissButton.removeEventListener('click', handleDismissClick);
-			dismissButton.removeEventListener('keydown', handleDismissKeydown);
+			card.removeEventListener('click', handleCardClick);
+			card.removeEventListener('keydown', handleCardKeydown);
 			observer?.disconnect();
 		},
 		{ once: true }
