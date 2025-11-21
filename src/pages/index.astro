@@ -44,6 +44,7 @@ const groundsMapScriptUrl = (await import('../scripts/groundsMap.client.js?url')
 const partnerSpotlightScriptUrl = (await import('../scripts/partnerSpotlight.client.js?url')).default;
 const scheduleCarouselScriptUrl = (await import('../scripts/scheduleCarousel.client.js?url')).default;
 const galleryRevealScriptUrl = (await import('../scripts/galleryReveal.client.js?url')).default;
+const pageViewCounterScriptUrl = (await import('../scripts/pageViewCounter.js?url')).default;
 
 const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
 const eventTimeFormatter = new Intl.DateTimeFormat('en-US', {
@@ -579,5 +580,7 @@ if (nextEventDaysSlice.length === 1) {
 
 	{hasGallery && <GalleryModals images={gallery} />}
 	{events.length > 0 && <EventModals events={events} />}
+
+		<script type="module" src={pageViewCounterScriptUrl}></script>
 
 </BaseLayout>
