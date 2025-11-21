@@ -79,11 +79,24 @@ const initSpotlight = () => {
 		card.classList.add('partner-card--footer');
 		footerTarget.dataset.partnerFooterState = 'with-card';
 		setExpandedState(false);
-		footerTarget.prepend(card);
+		footerTarget.insertBefore(card, footerTarget.firstChild);
 		observer?.disconnect();
 	};
 
-	dismissButton.addEventListener('click', moveToFooter, { once: true });
+	const handleDismissClick = (event: MouseEvent) => {
+		event.preventDefault();
+		moveToFooter();
+	};
+
+	const handleDismissKeydown = (event: KeyboardEvent) => {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			moveToFooter();
+		}
+	};
+
+	dismissButton.addEventListener('click', handleDismissClick);
+	dismissButton.addEventListener('keydown', handleDismissKeydown);
 
 	observer = new IntersectionObserver(
 		(entries) => {
@@ -101,7 +114,8 @@ const initSpotlight = () => {
 	card.addEventListener(
 		'astro:before-swap',
 		() => {
-			dismissButton.removeEventListener('click', moveToFooter);
+			dismissButton.removeEventListener('click', handleDismissClick);
+			dismissButton.removeEventListener('keydown', handleDismissKeydown);
 			observer?.disconnect();
 		},
 		{ once: true }
