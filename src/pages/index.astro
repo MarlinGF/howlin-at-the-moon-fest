@@ -38,7 +38,7 @@ const mapId = (import.meta.env.PUBLIC_GOOGLE_MAPS_MAP_ID ?? '').trim();
 const mapPreferCloud =
 	!import.meta.env.DEV && (import.meta.env.PUBLIC_GOOGLE_MAPS_USE_MAP_ID ?? '').trim().toLowerCase() === 'true';
 const mapLocationLabel = pageTitle;
-const mapCoverImage = '/images/Howling%20at%20the%20Moon%20Festival%20Design-2.png';
+const mapCoverImage = '/images/howlin-map-cover.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
 const groundsMapScriptUrl = (await import('../scripts/groundsMap.client.js?url')).default;
 const partnerSpotlightScriptUrl = (await import('../scripts/partnerSpotlight.client.js?url')).default;
