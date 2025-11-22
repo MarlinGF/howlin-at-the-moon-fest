@@ -14,7 +14,7 @@ const faqs = festival.faqs;
 
 const pageTitle = hero?.title ?? festival.meta.siteName ?? 'WeBeFriends Integration';
 const pageDescription = hero?.description ?? `Latest content powered by WeBeFriends for ${festival.meta.siteName ?? 'this site'}.`;
-const ogImage = hero?.background?.src ?? '/images/hero/moonrise.svg';
+const ogImage = hero?.background?.src ?? '/images/moon-bkg.png';
 
 const eventsById = new Map(events.map((event) => [event.id, event]));
 const standardGatesOpen = '10:00 AM';

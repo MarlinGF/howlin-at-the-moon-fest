@@ -35,9 +35,15 @@ WEBE_API_KEY="<one-time key issued in Integration Studio>"
 # Optional overrides
 # WEBE_SITE_SLUG="howlin-yuma"
 # WEBE_API_BASE="https://webefriends.com/api/integrations"
+# PUBLIC_SITE_URL="https://your-prod-domain.example"
+# PUBLIC_GA_MEASUREMENT_ID="G-XXXXXXXXXX"
 ```
 
 `WEBE_API_KEY` is required for production data. If it is missing, the build falls back to local mock content so you can continue developing UI without external connectivity.
+
+`PUBLIC_SITE_URL` is used to generate absolute Open Graph and Twitter image URLs so social platforms pick up the default share graphic in `public/images/moon-bkg.png`.
+
+Set `PUBLIC_GA_MEASUREMENT_ID` to enable Google Analytics 4 tracking across every deployment.
 
 ## Data Notes
 

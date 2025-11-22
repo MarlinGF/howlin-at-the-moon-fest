@@ -7,6 +7,8 @@ interface ImportMetaEnv {
 	readonly PUBLIC_GOOGLE_MAPS_KEY?: string;
 	readonly PUBLIC_GOOGLE_MAPS_QUERY?: string;
 	readonly PUBLIC_GOOGLE_MAPS_ZOOM?: string;
+	readonly PUBLIC_SITE_URL?: string;
+	readonly PUBLIC_GA_MEASUREMENT_ID?: string;
 }
 
 interface ImportMeta {

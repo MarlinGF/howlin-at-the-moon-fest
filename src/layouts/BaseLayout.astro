@@ -10,8 +10,17 @@ interface Props {
 const {
 	title = "Howlin' At The Moon Fest",
 	description = "The signature Yuma night festival celebrating desert soundscapes, immersive art, and cosmic community.",
-	ogImage = '/images/hero/moonrise.svg',
+	ogImage = '/images/moon-bkg.png',
 } = Astro.props satisfies Props;
+
+const siteUrl = Astro.site?.origin ?? import.meta.env.PUBLIC_SITE_URL ?? '';
+const resolvedOgImage = ogImage.startsWith('http')
+	? ogImage
+	: siteUrl
+		? new URL(ogImage, siteUrl).toString()
+		: ogImage;
+
+const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID?.trim();
 ---
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
@@ -23,10 +32,20 @@ const {
 		<title>{title}</title>
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
-		<meta property="og:image" content={ogImage} />
+		{resolvedOgImage && <meta property="og:image" content={resolvedOgImage} />}
+		{resolvedOgImage && <meta property="og:image:secure_url" content={resolvedOgImage} />}
+		{resolvedOgImage && <meta name="twitter:image" content={resolvedOgImage} />}
 		<meta name="twitter:card" content="summary_large_image" />
 		<link rel="icon" href="/images/Howlinicon.svg" type="image/svg+xml" />
 		<link rel="preload" as="image" href="/images/sky-moon.png" type="image/png" fetchpriority="high" />
+		{gaMeasurementId && (
+			<>
+				<script async src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}></script>
+				<script is:inline>
+{`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '${gaMeasurementId}');`}
+				</script>
+			</>
+		)}
 	</head>
 	<body class="bg-slate-950 text-slate-100 antialiased">
 		<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-slate-900 focus:px-4 focus:py-2">

@@ -1,4 +1,5 @@
-const STORAGE_KEY = 'hatm-page-views';
+const STORAGE_KEY = 'hatm-page-views-2025-11-reset';
+const LEGACY_STORAGE_KEYS = ['hatm-page-views'];
 const COUNTER_ID = 'page-view-counter';
 
 const formatCount = (value) => value.toLocaleString();
@@ -28,6 +29,11 @@ const renderCounter = (count) => {
 const incrementCounter = () => {
 	let current = 0;
 	try {
+		LEGACY_STORAGE_KEYS.forEach((key) => {
+			if (key !== STORAGE_KEY) {
+				window.localStorage.removeItem(key);
+			}
+		});
 		const stored = window.localStorage.getItem(STORAGE_KEY);
 		if (stored) {
 			const parsed = Number.parseInt(stored, 10);
