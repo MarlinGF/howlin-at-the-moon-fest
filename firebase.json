@@ -11,10 +11,18 @@
     "trailingSlash": false,
     "rewrites": [
       {
+        "source": "/api/visitor-count",
+        "function": "visitorCount"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
   },
   "firestore": {
     "rules": "firestore.rules",

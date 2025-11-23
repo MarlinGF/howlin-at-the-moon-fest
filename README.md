@@ -22,6 +22,8 @@ The development server binds to `0.0.0.0` so it can be previewed across devices 
 ```sh
 npm run build
 npm run preview
+# Compile serverless functions when deploying
+npm --prefix functions run build
 ```
 
 The build command outputs a static site to `dist/`. Use `npm run preview` to validate the build locally before deployment.
@@ -37,6 +39,7 @@ WEBE_API_KEY="<one-time key issued in Integration Studio>"
 # WEBE_API_BASE="https://webefriends.com/api/integrations"
 # PUBLIC_SITE_URL="https://your-prod-domain.example"
 # PUBLIC_GA_MEASUREMENT_ID="G-XXXXXXXXXX"
+# FIREBASE_SERVICE_ACCOUNT='{"projectId":"howling-vs-build",...}'
 ```
 
 `WEBE_API_KEY` is required for production data. If it is missing, the build falls back to local mock content so you can continue developing UI without external connectivity.
@@ -44,6 +47,10 @@ WEBE_API_KEY="<one-time key issued in Integration Studio>"
 `PUBLIC_SITE_URL` is used to generate absolute Open Graph and Twitter image URLs so social platforms pick up the default share graphic in `public/images/moon-bkg.png`.
 
 Set `PUBLIC_GA_MEASUREMENT_ID` to enable Google Analytics 4 tracking across every deployment.
+
+`FIREBASE_SERVICE_ACCOUNT` is optional for local development; when running on Firebase Hosting the default credentials from the `howling-vs-build` project are used automatically.
+
+The shared visitor counter lives at `src/pages/api/visitor-count.ts`. It uses Firestore to log one hit per visitor each day (deduplicated across all domains) and `src/scripts/pageViewCounter.js` renders the value in the footer. Firebase Hosting rewrites `/api/visitor-count` to the Cloud Function in `functions/src/index.ts` for production, while the Astro route stays usable during local development.
 
 ## Data Notes
 

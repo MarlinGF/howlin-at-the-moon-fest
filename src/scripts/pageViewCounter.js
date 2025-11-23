@@ -1,8 +1,12 @@
-const STORAGE_KEY = 'hatm-page-views-2025-11-reset';
-const LEGACY_STORAGE_KEYS = ['hatm-page-views'];
 const COUNTER_ID = 'page-view-counter';
+const API_ENDPOINT = '/api/visitor-count';
 
-const formatCount = (value) => value.toLocaleString();
+const formatCount = (value) => {
+	if (!Number.isFinite(value)) {
+		return '—';
+	}
+	return value.toLocaleString();
+};
 
 const renderCounter = (count) => {
 	const container = document.getElementById(COUNTER_ID);
@@ -26,35 +30,39 @@ const renderCounter = (count) => {
 	container.replaceChildren(wrapper);
 };
 
-const incrementCounter = () => {
-	let current = 0;
+const renderLoading = () => {
+	const container = document.getElementById(COUNTER_ID);
+	if (!container) {
+		return;
+	}
+
+	container.textContent = 'Counting eyes on the page…';
+};
+
+const fetchCounter = async () => {
+	const container = document.getElementById(COUNTER_ID);
+	if (!container) {
+		return;
+	}
+
 	try {
-		LEGACY_STORAGE_KEYS.forEach((key) => {
-			if (key !== STORAGE_KEY) {
-				window.localStorage.removeItem(key);
-			}
+		const response = await fetch(API_ENDPOINT, {
+			method: 'GET',
+			cache: 'no-store',
+			credentials: 'omit'
 		});
-		const stored = window.localStorage.getItem(STORAGE_KEY);
-		if (stored) {
-			const parsed = Number.parseInt(stored, 10);
-			if (Number.isFinite(parsed) && parsed >= 0) {
-				current = parsed;
-			}
+
+		if (!response.ok) {
+			throw new Error(`Request failed: ${response.status}`);
 		}
+
+		const payload = await response.json();
+		const total = Number.parseInt(payload?.count ?? 0, 10);
+		renderCounter(Number.isFinite(total) ? total : 0);
 	} catch (error) {
-		// localStorage may be disabled; fall back to zero.
-		current = 0;
+		console.error('Page view counter request failed', error);
+		renderCounter(Number.NaN);
 	}
-
-	const next = current + 1;
-
-	try {
-		window.localStorage.setItem(STORAGE_KEY, String(next));
-	} catch (error) {
-		// Ignore storage write errors (e.g., Safari private mode).
-	}
-
-	renderCounter(next);
 };
 
 const boot = () => {
@@ -62,12 +70,8 @@ const boot = () => {
 		return;
 	}
 
-	const container = document.getElementById(COUNTER_ID);
-	if (!container) {
-		return;
-	}
-
-	incrementCounter();
+	renderLoading();
+	void fetchCounter();
 };
 
 if (typeof window !== 'undefined') {

@@ -7,13 +7,14 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "deploy": "npm run build && firebase deploy --only hosting,firestore"
+    "deploy": "npm run build && npm --prefix functions run build && firebase deploy --only hosting,functions,firestore"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.5",
     "@tailwindcss/vite": "^4.1.16",
     "astro": "^5.15.3",
     "dialog-polyfill": "^0.5.6",
+    "firebase-admin": "^13.6.0",
     "tailwindcss": "^4.1.16",
     "typescript": "^5.9.3"
   },
