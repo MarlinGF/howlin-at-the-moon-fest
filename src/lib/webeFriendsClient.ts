@@ -305,6 +305,51 @@ function clone<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function coerceArray<T>(value: unknown): T[] {
+	if (Array.isArray(value)) {
+		return value as T[];
+	}
+	if (isRecord(value)) {
+		const withData = value as { data?: unknown; items?: unknown } & Record<string, unknown>;
+		if (Array.isArray(withData.data)) {
+			return withData.data as T[];
+		}
+		if (Array.isArray(withData.items)) {
+			return withData.items as T[];
+		}
+		return Object.values(value) as T[];
+	}
+	return [];
+}
+
+function normalizeScheduleDay(input: unknown): ScheduleDay | null {
+	if (!isRecord(input)) {
+		return null;
+	}
+	const dayLabelRaw = input.dayLabel;
+	const dateLabelRaw = input.dateLabel;
+	const gatesOpenRaw = input.gatesOpen;
+	const eventIdsRaw = input.eventIds;
+	if (typeof dayLabelRaw !== 'string' || dayLabelRaw.trim().length === 0) {
+		return null;
+	}
+	if (typeof dateLabelRaw !== 'string' || dateLabelRaw.trim().length === 0) {
+		return null;
+	}
+	const gatesOpen = typeof gatesOpenRaw === 'string' && gatesOpenRaw.trim().length > 0 ? gatesOpenRaw : '10:00 AM';
+	const eventIds = coerceArray<unknown>(eventIdsRaw).filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+	return {
+		dayLabel: dayLabelRaw,
+		dateLabel: dateLabelRaw,
+		gatesOpen,
+		eventIds,
+	};
+}
+
 function createFallbackFestivalContent(): FestivalContent {
 	const fallback = clone(fallbackFestivalContentTemplate);
 	fallback.meta.generatedAt = new Date().toISOString();
@@ -336,28 +381,36 @@ function normalizeEventDetail(event: EventDetailPayload): EventDetail | null {
 }
 
 function normalizeFestivalContent(payload: IntegrationApiResponse): FestivalContent | null {
-	if (!payload.meta || !payload.meta.siteSlug || !payload.meta.siteName || !payload.meta.sourcePageId) {
+	const meta = payload.meta ?? {};
+	const siteSlug = typeof meta.siteSlug === 'string' && meta.siteSlug.trim().length > 0 ? meta.siteSlug : DEFAULT_SITE_SLUG;
+	const siteName = typeof meta.siteName === 'string' && meta.siteName.trim().length > 0 ? meta.siteName : fallbackFestivalContentTemplate.meta.siteName;
+	const sourcePageId = typeof meta.sourcePageId === 'string' && meta.sourcePageId.trim().length > 0 ? meta.sourcePageId : fallbackFestivalContentTemplate.meta.sourcePageId;
+	const generatedAt = typeof meta.generatedAt === 'string' && meta.generatedAt.trim().length > 0 ? meta.generatedAt : new Date().toISOString();
+	if (!siteSlug || !siteName || !sourcePageId) {
 		return null;
 	}
-	const events = (payload.events ?? [])
+	const events = coerceArray<EventDetailPayload>(payload.events)
 		.map(normalizeEventDetail)
 		.filter((event): event is EventDetail => Boolean(event));
+	const scheduleDays = coerceArray<unknown>(payload.schedule?.days)
+		.map(normalizeScheduleDay)
+		.filter((day): day is ScheduleDay => Boolean(day));
 	return {
 		meta: {
-			siteSlug: payload.meta.siteSlug,
-			siteName: payload.meta.siteName,
-			sourcePageId: payload.meta.sourcePageId,
-			generatedAt: payload.meta.generatedAt ?? new Date().toISOString(),
+			siteSlug,
+			siteName,
+			sourcePageId,
+			generatedAt,
 		},
 		hero: payload.hero,
-		stats: payload.stats ?? [],
+		stats: coerceArray<FestivalStat>(payload.stats),
 		events,
 		schedule: {
-			days: payload.schedule?.days ?? [],
+			days: scheduleDays,
 		},
-		gallery: payload.gallery ?? [],
-		sponsors: payload.sponsors ?? [],
-		faqs: payload.faqs ?? [],
+		gallery: coerceArray<ImageAsset>(payload.gallery),
+		sponsors: coerceArray<Sponsor>(payload.sponsors),
+		faqs: coerceArray<FaqItem>(payload.faqs),
 	};
 }
 
