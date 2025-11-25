@@ -173,10 +173,23 @@ const initCarousel = (container) => {
 		}
 	};
 
+	const resolveHiddenCards = () =>
+		Array.from(container.querySelectorAll(CARD_SELECTOR)).filter((card) => {
+			if (!(card instanceof HTMLElement)) {
+				return false;
+			}
+			if (card.dataset.mobileHidden === 'true') {
+				return true;
+			}
+			if (card.classList.contains('hidden')) {
+				return true;
+			}
+			const style = window.getComputedStyle(card);
+			return style.display === 'none' || style.visibility === 'hidden';
+		});
+
 	const revealAdditionalCards = () => {
-		const hiddenCards = Array.from(
-			container.querySelectorAll(`${CARD_SELECTOR}[data-mobile-hidden="true"]`)
-		);
+		const hiddenCards = resolveHiddenCards();
 		if (hiddenCards.length === 0) {
 			return;
 		}
