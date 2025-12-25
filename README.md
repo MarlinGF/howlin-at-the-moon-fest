@@ -34,6 +34,7 @@ Create a `.env` file (or export variables in your shell) before running or build
 
 ```sh
 WEBE_API_KEY="<one-time key issued in Integration Studio>"
+WEBE_WEBHOOK_SECRET="<shared secret configured in Integration Studio>"
 # Optional overrides
 # WEBE_SITE_SLUG="howlin-yuma"
 # WEBE_API_BASE="https://webefriends.com/api/integrations"
@@ -58,6 +59,9 @@ The shared visitor counter lives at `src/pages/api/visitor-count.ts`. It uses Fi
 - Every payload section (hero, stats, events, schedule, gallery, sponsors, FAQs) is optional. The UI hides sections automatically when a bundle is disabled.
 - If the remote request fails or the key is invalid/rotated, the client serves the last cached response; if none exists it falls back to a local mock festival dataset.
 - Image assets stream directly from WeBeFriends. Swap any bespoke placeholders in `public/images/` once final art is available.
+- Incoming `events.changed` webhooks land on the `webeEvents` Cloud Function, which validates the `WEBE_WEBHOOK_SECRET`, de-duplicates retries, and updates the Firestore cache so deletions disappear instantly and updates reorder chronologically.
+- The current integration snapshot lives in Firestore under `webeSites/{siteSlug}`; `fetchFestivalContent()` first reads this cache so the static site reflects webhook changes without waiting for a rebuild.
+- A scheduled `webeNightlyRefresh` function re-syncs the full bundle from the WeBeFriends API every night to recover from any missed webhooks.
 
 ## Next Steps
 

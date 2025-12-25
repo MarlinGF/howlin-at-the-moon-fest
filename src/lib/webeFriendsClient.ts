@@ -1,85 +1,39 @@
-export type ImageAsset = {
-	src: string;
-	alt: string;
-};
+import { firestore } from './firebaseAdmin';
+import { buildScheduleFromEvents, filterUpcomingEvents } from './eventUtils';
+import type {
+	CtaLink,
+	EventDetail,
+	FaqItem,
+	FestivalContent,
+	FestivalStat,
+	HeroBlock,
+	ImageAsset,
+	IntegrationMeta,
+	Schedule,
+	ScheduleDay,
+	Sponsor,
+} from './webeTypes';
 
-export type CtaLink = {
-	label: string;
-	href: string;
-};
+export type {
+	CtaLink,
+	EventDetail,
+	FaqItem,
+	FestivalContent,
+	FestivalStat,
+	HeroBlock,
+	ImageAsset,
+	IntegrationMeta,
+	Schedule,
+	ScheduleDay,
+	Sponsor,
+} from './webeTypes';
 
-export type HeroBlock = {
-	kicker?: string;
-	title: string;
-	tagline?: string;
-	description?: string;
-	primaryCta?: CtaLink;
-	secondaryCta?: CtaLink;
-	background?: ImageAsset;
-};
-
-export type EventDetail = {
-	id: string;
-	title: string;
-	stage: string;
-	dayLabel: string;
-	area: string;
-	start: string;
-	end: string;
-	description: string;
-	image: ImageAsset;
-	tags: string[];
-};
-
-export type ScheduleDay = {
-	dayLabel: string;
-	dateLabel: string;
-	gatesOpen: string;
-	eventIds: string[];
-};
-
-export type FestivalStat = {
-	label: string;
-	value: number | string;
-};
-
-export type Sponsor = {
-	name: string;
-	tier: string;
-	description: string;
-};
-
-export type FaqItem = {
-	question: string;
-	answer: string;
-};
-
-export type IntegrationMeta = {
-	siteSlug: string;
-	siteName: string;
-	sourcePageId: string;
-	generatedAt: string;
-};
-
-export type Schedule = {
-	days: ScheduleDay[];
-};
-
-export type FestivalContent = {
-	meta: IntegrationMeta;
-	hero?: HeroBlock;
-	stats: FestivalStat[];
-	events: EventDetail[];
-	schedule: Schedule;
-	gallery: ImageAsset[];
-	sponsors: Sponsor[];
-	faqs: FaqItem[];
-};
-
-type EventDetailPayload = Omit<EventDetail, 'description' | 'image' | 'tags'> & {
+type EventDetailPayload = Omit<EventDetail, 'description' | 'image' | 'tags' | 'metadata'> & {
 	description?: string;
 	image?: ImageAsset;
 	tags?: string[];
+	metadata?: Record<string, unknown>;
+	date?: string;
 };
 
 type IntegrationApiResponse = {
@@ -106,6 +60,55 @@ const DEFAULT_SITE_SLUG = import.meta.env.WEBE_SITE_SLUG ?? 'howlin-yuma';
 const API_KEY = import.meta.env.WEBE_API_KEY;
 
 const cache = new Map<string, CacheEntry>();
+const SITES_COLLECTION = 'webeSites';
+
+const serializeForStore = <T>(value: T): T => {
+	try {
+		return JSON.parse(JSON.stringify(value)) as T;
+	} catch (error) {
+		console.warn('Unable to serialise integration content for storage', error);
+		return value;
+	}
+};
+
+const readCachedFestivalContent = async (siteSlug: string): Promise<FestivalContent | null> => {
+	try {
+		const snapshot = await firestore.collection(SITES_COLLECTION).doc(siteSlug).get();
+		if (!snapshot.exists) {
+			return null;
+		}
+		const data = snapshot.data();
+		if (!data || typeof data !== 'object' || !('content' in data)) {
+			return null;
+		}
+		const content = data.content as FestivalContent | undefined;
+		if (!content) {
+			return null;
+		}
+		return clone(content);
+	} catch (error) {
+		console.warn('Unable to load cached WeBeFriends content from Firestore.', error);
+		return null;
+	}
+};
+
+const writeCachedFestivalContent = async (siteSlug: string, content: FestivalContent): Promise<void> => {
+	try {
+		await firestore
+			.collection(SITES_COLLECTION)
+			.doc(siteSlug)
+			.set(
+				{
+					siteSlug,
+					cachedAt: new Date().toISOString(),
+					content: serializeForStore(content),
+				},
+				{ merge: true }
+			);
+	} catch (error) {
+		console.warn('Unable to cache WeBeFriends content in Firestore.', error);
+	}
+};
 
 const fallbackFestivalContentTemplate: FestivalContent = {
 	meta: {
@@ -353,6 +356,22 @@ function normalizeScheduleDay(input: unknown): ScheduleDay | null {
 function createFallbackFestivalContent(): FestivalContent {
 	const fallback = clone(fallbackFestivalContentTemplate);
 	fallback.meta.generatedAt = new Date().toISOString();
+	const fallbackGates = new Map<string, string>();
+	fallback.schedule.days.forEach((day) => {
+		fallbackGates.set(day.dayLabel, day.gatesOpen);
+	});
+	const includeEmptyDays = fallback.schedule.days.map((day) => ({
+		dayLabel: day.dayLabel,
+		dateLabel: day.dateLabel,
+		gatesOpen: day.gatesOpen,
+		eventIds: [],
+	}));
+	const upcoming = filterUpcomingEvents(fallback.events);
+	fallback.events = upcoming;
+	fallback.schedule = buildScheduleFromEvents(upcoming, {
+		fallbackGates,
+		includeEmptyDays,
+	});
 	return fallback;
 }
 
@@ -363,7 +382,10 @@ function normalizeEventDetail(event: EventDetailPayload): EventDetail | null {
 	if (!event.image || !event.image.src) {
 		return null;
 	}
-	return {
+	const tags = Array.isArray(event.tags)
+		? event.tags.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+		: [];
+	const detail: EventDetail = {
 		id: event.id,
 		title: event.title,
 		stage: event.stage,
@@ -376,8 +398,54 @@ function normalizeEventDetail(event: EventDetailPayload): EventDetail | null {
 			src: event.image.src,
 			alt: event.image.alt ?? '',
 		},
-		tags: event.tags ?? [],
+		tags,
 	};
+	if (typeof event.slug === 'string' && event.slug.trim().length > 0) {
+		detail.slug = event.slug.trim();
+	}
+	if (typeof event.gatesOpenAt === 'string' && event.gatesOpenAt.trim().length > 0) {
+		detail.gatesOpenAt = event.gatesOpenAt.trim();
+	}
+	if (typeof event.date === 'string' && event.date.trim().length > 0) {
+		detail.dateLabel = event.date.trim();
+	}
+	if ('recurrence' in event && event.recurrence !== undefined) {
+		detail.recurrence = event.recurrence as EventDetail['recurrence'];
+	}
+	const knownKeys = new Set([
+		'id',
+		'title',
+		'stage',
+		'dayLabel',
+		'area',
+		'start',
+		'end',
+		'description',
+		'image',
+		'tags',
+		'slug',
+		'gatesOpenAt',
+		'date',
+		'dateLabel',
+		'recurrence',
+		'metadata',
+	]);
+	const metadata: Record<string, unknown> = {};
+	if (event.metadata && typeof event.metadata === 'object') {
+		Object.assign(metadata, event.metadata);
+	}
+	Object.entries(event as Record<string, unknown>).forEach(([key, value]) => {
+		if (knownKeys.has(key)) {
+			return;
+		}
+		if (value !== undefined && value !== null) {
+			metadata[key] = value;
+		}
+	});
+	if (Object.keys(metadata).length > 0) {
+		detail.metadata = metadata;
+	}
+	return detail;
 }
 
 function normalizeFestivalContent(payload: IntegrationApiResponse): FestivalContent | null {
@@ -395,6 +463,21 @@ function normalizeFestivalContent(payload: IntegrationApiResponse): FestivalCont
 	const scheduleDays = coerceArray<unknown>(payload.schedule?.days)
 		.map(normalizeScheduleDay)
 		.filter((day): day is ScheduleDay => Boolean(day));
+	const fallbackGates = new Map<string, string>();
+	scheduleDays.forEach((day) => {
+		fallbackGates.set(day.dayLabel, day.gatesOpen);
+	});
+	const includeEmptyDays = scheduleDays.map((day) => ({
+		dayLabel: day.dayLabel,
+		dateLabel: day.dateLabel,
+		gatesOpen: day.gatesOpen,
+		eventIds: [],
+	}));
+	const upcomingEvents = filterUpcomingEvents(events);
+	const schedule = buildScheduleFromEvents(upcomingEvents, {
+		fallbackGates,
+		includeEmptyDays,
+	});
 	return {
 		meta: {
 			siteSlug,
@@ -404,10 +487,8 @@ function normalizeFestivalContent(payload: IntegrationApiResponse): FestivalCont
 		},
 		hero: payload.hero,
 		stats: coerceArray<FestivalStat>(payload.stats),
-		events,
-		schedule: {
-			days: scheduleDays,
-		},
+		events: upcomingEvents,
+		schedule,
 		gallery: coerceArray<ImageAsset>(payload.gallery),
 		sponsors: coerceArray<Sponsor>(payload.sponsors),
 		faqs: coerceArray<FaqItem>(payload.faqs),
@@ -489,12 +570,22 @@ async function requestFestivalContent(siteSlug: string): Promise<{ content: Fest
 
 export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG): Promise<FestivalContent> {
 	const now = Date.now();
-	const cached = cache.get(siteSlug);
-	if (cached && now < cached.expiresAt) {
-		return clone(cached.data);
+	const memoryEntry = cache.get(siteSlug);
+	if (memoryEntry && now < memoryEntry.expiresAt) {
+		return clone(memoryEntry.data);
 	}
 
-	const fallbackWithinStaleWindow = cached && now < cached.staleAt ? cached.data : null;
+	const staleEntry = memoryEntry && now < memoryEntry.staleAt ? memoryEntry.data : null;
+	const stored = await readCachedFestivalContent(siteSlug);
+	if (stored) {
+		cache.set(siteSlug, {
+			data: stored,
+			expiresAt: now + 120_000,
+			staleAt: now + 420_000,
+		});
+		return clone(stored);
+	}
+
 	const remote = await requestFestivalContent(siteSlug);
 	if (remote) {
 		const { content, cache: cacheMetadata } = remote;
@@ -503,11 +594,12 @@ export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG)
 			expiresAt: now + cacheMetadata.maxAgeMs,
 			staleAt: now + cacheMetadata.maxAgeMs + cacheMetadata.staleWhileRevalidateMs,
 		});
+		void writeCachedFestivalContent(siteSlug, content);
 		return clone(content);
 	}
-	if (fallbackWithinStaleWindow) {
+	if (staleEntry) {
 		console.warn('Serving stale WeBeFriends content from cache.');
-		return clone(fallbackWithinStaleWindow);
+		return clone(staleEntry);
 	}
 	const fallback = createFallbackFestivalContent();
 	cache.set(siteSlug, {
@@ -515,5 +607,6 @@ export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG)
 		expiresAt: now + 120_000,
 		staleAt: now + 420_000,
 	});
+	void writeCachedFestivalContent(siteSlug, fallback);
 	return fallback;
 }

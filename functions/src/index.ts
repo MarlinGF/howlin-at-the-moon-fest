@@ -1,6 +1,8 @@
 import { onRequest, type Request } from 'firebase-functions/v2/https';
 
 import { getVisitorHash, registerVisitor } from './visitorCounter';
+import { webeEvents } from './webeWebhook';
+import { webeNightlyRefresh } from './webeRefresh';
 
 const IP_HEADER_CANDIDATES = [
 	'x-forwarded-for',
@@ -37,3 +39,5 @@ export const visitorCount = onRequest(async (req, res) => {
 		res.status(500).json({ error: 'Unable to fetch visitor count' });
 	}
 });
+
+export { webeEvents, webeNightlyRefresh };
