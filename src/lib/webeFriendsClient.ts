@@ -55,12 +55,18 @@ type CacheEntry = {
 	staleAt: number;
 };
 
+type CachedFestivalContent = {
+	content: FestivalContent;
+	cachedAt?: string;
+};
+
 const API_BASE_URL = (import.meta.env.WEBE_API_BASE ?? 'https://webefriends.com/api/integrations').replace(/\/?$/, '');
 const DEFAULT_SITE_SLUG = import.meta.env.WEBE_SITE_SLUG ?? 'howlin-yuma';
 const API_KEY = import.meta.env.WEBE_API_KEY;
 
 const cache = new Map<string, CacheEntry>();
 const SITES_COLLECTION = 'webeSites';
+const FIRESTORE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const serializeForStore = <T>(value: T): T => {
 	try {
@@ -71,7 +77,7 @@ const serializeForStore = <T>(value: T): T => {
 	}
 };
 
-const readCachedFestivalContent = async (siteSlug: string): Promise<FestivalContent | null> => {
+const readCachedFestivalContent = async (siteSlug: string): Promise<CachedFestivalContent | null> => {
 	try {
 		const snapshot = await firestore.collection(SITES_COLLECTION).doc(siteSlug).get();
 		if (!snapshot.exists) {
@@ -85,7 +91,8 @@ const readCachedFestivalContent = async (siteSlug: string): Promise<FestivalCont
 		if (!content) {
 			return null;
 		}
-		return clone(content);
+		const cachedAt = typeof data.cachedAt === 'string' ? data.cachedAt : undefined;
+		return { content: clone(content), cachedAt };
 	} catch (error) {
 		console.warn('Unable to load cached WeBeFriends content from Firestore.', error);
 		return null;
@@ -576,15 +583,6 @@ export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG)
 	}
 
 	const staleEntry = memoryEntry && now < memoryEntry.staleAt ? memoryEntry.data : null;
-	const stored = await readCachedFestivalContent(siteSlug);
-	if (stored) {
-		cache.set(siteSlug, {
-			data: stored,
-			expiresAt: now + 120_000,
-			staleAt: now + 420_000,
-		});
-		return clone(stored);
-	}
 
 	const remote = await requestFestivalContent(siteSlug);
 	if (remote) {
@@ -597,10 +595,26 @@ export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG)
 		void writeCachedFestivalContent(siteSlug, content);
 		return clone(content);
 	}
+
+	const stored = await readCachedFestivalContent(siteSlug);
+	if (stored) {
+		const { content, cachedAt } = stored;
+		const cachedAtMs = cachedAt ? Date.parse(cachedAt) : Number.NaN;
+		const ageMs = Number.isFinite(cachedAtMs) ? now - cachedAtMs : Number.POSITIVE_INFINITY;
+		const remainingTtl = Math.max(FIRESTORE_CACHE_TTL_MS - ageMs, 0);
+		cache.set(siteSlug, {
+			data: content,
+			expiresAt: now + remainingTtl,
+			staleAt: now + FIRESTORE_CACHE_TTL_MS,
+		});
+		return clone(content);
+	}
+
 	if (staleEntry) {
 		console.warn('Serving stale WeBeFriends content from cache.');
 		return clone(staleEntry);
 	}
+
 	const fallback = createFallbackFestivalContent();
 	cache.set(siteSlug, {
 		data: fallback,
