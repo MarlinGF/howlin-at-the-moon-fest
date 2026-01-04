@@ -570,7 +570,14 @@ async function requestFestivalContent(siteSlug: string): Promise<{ content: Fest
 			cache: parseCacheControl(response.headers.get('cache-control')),
 		};
 	} catch (error) {
-		console.error('Failed to reach the WeBeFriends API. Falling back to cached or mock data.', error);
+		if (error instanceof TypeError) {
+			console.error(
+				'WeBeFriends API request failed due to a network or CORS issue. Confirm the origin allowlist and API credentials.',
+				error
+			);
+		} else {
+			console.error('Failed to reach the WeBeFriends API. Falling back to cached or mock data.', error);
+		}
 		return null;
 	}
 }
