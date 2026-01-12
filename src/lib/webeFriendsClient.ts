@@ -382,6 +382,31 @@ function createFallbackFestivalContent(): FestivalContent {
 	return fallback;
 }
 
+function refreshFestivalContent(content: FestivalContent, options?: { now?: Date }): FestivalContent {
+	const pivot = options?.now ?? new Date();
+	const copy = clone(content);
+	const upcoming = filterUpcomingEvents(copy.events, { now: pivot });
+	const fallbackGates = new Map<string, string>();
+	const includeEmptyDays: ScheduleDay[] = [];
+	if (copy.schedule && Array.isArray(copy.schedule.days)) {
+		copy.schedule.days.forEach((day) => {
+			fallbackGates.set(day.dayLabel, day.gatesOpen);
+			includeEmptyDays.push({
+				dayLabel: day.dayLabel,
+				dateLabel: day.dateLabel,
+				gatesOpen: day.gatesOpen,
+				eventIds: [],
+			});
+		});
+	}
+	copy.events = upcoming;
+	copy.schedule = buildScheduleFromEvents(upcoming, {
+		fallbackGates,
+		includeEmptyDays,
+	});
+	return copy;
+}
+
 function normalizeEventDetail(event: EventDetailPayload): EventDetail | null {
 	if (!event || !event.id || !event.title || !event.stage || !event.dayLabel || !event.area || !event.start || !event.end) {
 		return null;
@@ -584,9 +609,12 @@ async function requestFestivalContent(siteSlug: string): Promise<{ content: Fest
 
 export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG): Promise<FestivalContent> {
 	const now = Date.now();
+	const pivot = new Date(now);
 	const memoryEntry = cache.get(siteSlug);
 	if (memoryEntry && now < memoryEntry.expiresAt) {
-		return clone(memoryEntry.data);
+		const refreshed = refreshFestivalContent(memoryEntry.data, { now: pivot });
+		cache.set(siteSlug, { ...memoryEntry, data: refreshed });
+		return clone(refreshed);
 	}
 
 	const staleEntry = memoryEntry && now < memoryEntry.staleAt ? memoryEntry.data : null;
@@ -594,40 +622,49 @@ export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG)
 	const remote = await requestFestivalContent(siteSlug);
 	if (remote) {
 		const { content, cache: cacheMetadata } = remote;
+		const refreshed = refreshFestivalContent(content, { now: pivot });
 		cache.set(siteSlug, {
-			data: content,
+			data: refreshed,
 			expiresAt: now + cacheMetadata.maxAgeMs,
 			staleAt: now + cacheMetadata.maxAgeMs + cacheMetadata.staleWhileRevalidateMs,
 		});
-		void writeCachedFestivalContent(siteSlug, content);
-		return clone(content);
+		void writeCachedFestivalContent(siteSlug, refreshed);
+		return clone(refreshed);
 	}
 
 	const stored = await readCachedFestivalContent(siteSlug);
 	if (stored) {
 		const { content, cachedAt } = stored;
+		const refreshed = refreshFestivalContent(content, { now: pivot });
 		const cachedAtMs = cachedAt ? Date.parse(cachedAt) : Number.NaN;
 		const ageMs = Number.isFinite(cachedAtMs) ? now - cachedAtMs : Number.POSITIVE_INFINITY;
 		const remainingTtl = Math.max(FIRESTORE_CACHE_TTL_MS - ageMs, 0);
 		cache.set(siteSlug, {
-			data: content,
+			data: refreshed,
 			expiresAt: now + remainingTtl,
 			staleAt: now + FIRESTORE_CACHE_TTL_MS,
 		});
-		return clone(content);
+		return clone(refreshed);
 	}
 
 	if (staleEntry) {
 		console.warn('Serving stale WeBeFriends content from cache.');
-		return clone(staleEntry);
+		const refreshed = refreshFestivalContent(staleEntry, { now: pivot });
+		cache.set(siteSlug, {
+			data: refreshed,
+			expiresAt: now + 30_000,
+			staleAt: now + 30_000,
+		});
+		return clone(refreshed);
 	}
 
 	const fallback = createFallbackFestivalContent();
+	const refreshedFallback = refreshFestivalContent(fallback, { now: pivot });
 	cache.set(siteSlug, {
-		data: fallback,
+		data: refreshedFallback,
 		expiresAt: now + 120_000,
 		staleAt: now + 420_000,
 	});
-	void writeCachedFestivalContent(siteSlug, fallback);
-	return fallback;
+	void writeCachedFestivalContent(siteSlug, refreshedFallback);
+	return clone(refreshedFallback);
 }
