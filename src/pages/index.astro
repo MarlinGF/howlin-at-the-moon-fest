@@ -88,39 +88,8 @@ const eventsWithTemporalData = events
 	.filter(({ startDate, endDate }) => !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime()))
 	.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
 
-const eventsGroupedByMonth = new Map<string, typeof eventsWithTemporalData>();
-eventsWithTemporalData.forEach((entry) => {
-	const monthKey = `${entry.startDate.getFullYear()}-${String(entry.startDate.getMonth() + 1).padStart(2, '0')}`;
-	const bucket = eventsGroupedByMonth.get(monthKey);
-	if (bucket) {
-		bucket.push(entry);
-	} else {
-		eventsGroupedByMonth.set(monthKey, [entry]);
-	}
-});
-
-const monthlyEventGroups = Array.from(eventsGroupedByMonth.values())
-	.map((group) => {
-		const sorted = [...group].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-		const firstDate = sorted[0]?.startDate;
-		const finalEndDate = sorted[sorted.length - 1]?.endDate;
-		if (!firstDate || !finalEndDate) {
-			return undefined;
-		}
-		const expiry = new Date(finalEndDate);
-		expiry.setHours(0, 0, 0, 0);
-		expiry.setDate(expiry.getDate() + 1);
-		return { events: sorted, firstDate, expiry };
-	})
-	.filter((group): group is { events: typeof eventsWithTemporalData; firstDate: Date; expiry: Date } => Boolean(group))
-	.sort((a, b) => a.firstDate.getTime() - b.firstDate.getTime());
-
-const activeMonthlyGroup =
-	monthlyEventGroups.find((group) => now < group.expiry) ??
-	monthlyEventGroups.find((group) => group.firstDate.getTime() >= now.getTime()) ??
-	monthlyEventGroups[monthlyEventGroups.length - 1];
-
-const featuredEvents = activeMonthlyGroup ? activeMonthlyGroup.events.slice(0, 2).map((entry) => entry.event) : [];
+const upcomingEventEntries = eventsWithTemporalData.filter(({ endDate }) => endDate.getTime() > now.getTime());
+const featuredEvents = upcomingEventEntries.slice(0, 2).map((entry) => entry.event);
 const hasHighlights = featuredEvents.length > 0;
 const hasSchedule = scheduleWithEvents.length > 0;
 
