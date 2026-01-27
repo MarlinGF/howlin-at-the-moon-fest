@@ -41,7 +41,7 @@ export const filterUpcomingEvents = (events: EventDetail[], options?: { now?: Da
 			const endTime = new Date(event.end).getTime();
 			return { event, startTime, endTime };
 		})
-		.filter(({ startTime, endTime }) => Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > pivotTime)
+		.filter(({ startTime, endTime }) => Number.isFinite(startTime) && Number.isFinite(endTime) && startTime > pivotTime)
 		.sort((a, b) => a.startTime - b.startTime)
 		.map(({ event }) => cloneEvent(event));
 };
