@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { onRequest, type Request } from 'firebase-functions/v2/https';
 
 import type { EventsChangedPayload, ProcessResult } from './webeIntegration';
-import { processEventsChanged } from './webeIntegration';
+import { processEventsChanged, refreshFestivalContent } from './webeIntegration';
 
 const WEBHOOK_SECRET = process.env.WEBE_WEBHOOK_SECRET ?? '';
 
@@ -120,6 +120,19 @@ export const webeEvents = onRequest({ timeoutSeconds: 10, cors: false }, async (
 	}
 
 	if (result.status === 'processed') {
+		// Immediately refresh from WeBeFriends API to ensure Firestore stays in sync
+		try {
+			const refreshResult = await refreshFestivalContent(siteSlug, {
+				reason: 'webhook',
+				correlationId,
+			});
+			if (refreshResult.status === 'processed') {
+				console.info(`[webe:${correlationId}] Refreshed festival content after webhook.`);
+			}
+		} catch (error) {
+			console.warn(`[webe:${correlationId}] Failed to refresh after webhook.`, error);
+			// Don't fail the webhook response if refresh fails; the event was already processed
+		}
 		res.status(202).send('accepted');
 		return;
 	}
