@@ -20,6 +20,10 @@
         "function": "eventsApi"
       },
       {
+        "source": "/api/webe/webhook",
+        "function": "webeEvents"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
