@@ -101,6 +101,18 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 	return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
+const isNonEmptyString = (value: unknown): value is string => {
+	return typeof value === 'string' && value.trim().length > 0;
+};
+
+const hasStringId = (value: unknown): value is { id: string } => {
+	if (!isRecord(value)) {
+		return false;
+	}
+	const candidate = value as { id?: unknown };
+	return isNonEmptyString(candidate.id);
+};
+
 const coerceArray = <T>(value: unknown): T[] => {
 	if (Array.isArray(value)) {
 		return value as T[];
@@ -465,11 +477,20 @@ export const processEventsChanged = async (
 	const { action, correlationId, triggeredAt } = context;
 	const siteSlug = context.siteSlug || payload.siteSlug || DEFAULT_SITE_SLUG;
 	const pageId = context.pageId ?? payload.pageId;
-	const eventId = payload.eventId || (isRecord(payload.event) ? (payload.event as Record<string, unknown>).id : undefined);
-	if (!eventId) {
+	const resolvedEventId = (() => {
+		if (isNonEmptyString(payload.eventId)) {
+			return payload.eventId;
+		}
+		if (hasStringId(payload.event)) {
+			return payload.event.id;
+		}
+		return undefined;
+	})();
+	if (!isNonEmptyString(resolvedEventId)) {
 		console.warn(`[webe:${correlationId}] Missing eventId for action ${action}.`);
 		return { status: 'skipped', reason: 'missing-event-id' };
 	}
+	const eventId: string = resolvedEventId.trim();
 
 	await ensureSiteDocument(siteSlug, pageId);
 

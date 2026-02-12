@@ -16,6 +16,10 @@
         "function": "visitorCount"
       },
       {
+        "source": "/api/events",
+        "function": "eventsApi"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

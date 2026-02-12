@@ -1,42 +1,9 @@
-import crypto from 'node:crypto';
-
 import { onRequest, type Request } from 'firebase-functions/v2/https';
 
 import type { EventsChangedPayload, ProcessResult } from './webeIntegration';
 import { processEventsChanged, refreshFestivalContent } from './webeIntegration';
 
-const WEBHOOK_SECRET = process.env.WEBE_WEBHOOK_SECRET ?? '';
-
-const normalizeSignature = (header: string | undefined): Buffer | null => {
-	if (!header) {
-		return null;
-	}
-	const value = header.trim().toLowerCase().startsWith('sha256=') ? header.trim().slice(7) : header.trim();
-	if (value.length !== 64) {
-		return null;
-	}
-	try {
-		return Buffer.from(value, 'hex');
-	} catch {
-		return null;
-	}
-};
-
-const verifySignature = (rawBody: Buffer, header: string | undefined): boolean => {
-	if (!WEBHOOK_SECRET) {
-		console.error('WEBE_WEBHOOK_SECRET is not configured. Rejecting webhook.');
-		return false;
-	}
-	const provided = normalizeSignature(header);
-	if (!provided) {
-		return false;
-	}
-	const expected = crypto.createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest();
-	if (expected.length !== provided.length) {
-		return false;
-	}
-	return crypto.timingSafeEqual(expected, provided);
-};
+type EventAction = 'created' | 'updated' | 'deleted';
 
 const parsePayload = (rawBody: Buffer): EventsChangedPayload | null => {
 	try {
@@ -47,7 +14,7 @@ const parsePayload = (rawBody: Buffer): EventsChangedPayload | null => {
 	}
 };
 
-const coerceAction = (headerValue: string | undefined, fallback?: EventsChangedPayload['action']): EventsChangedPayload['action'] => {
+const coerceAction = (headerValue: string | undefined, fallback?: EventsChangedPayload['action']): EventAction => {
 	if (headerValue) {
 		const lowered = headerValue.trim().toLowerCase();
 		if (lowered === 'created' || lowered === 'updated' || lowered === 'deleted') {
@@ -86,11 +53,6 @@ export const webeEvents = onRequest({ timeoutSeconds: 10, cors: false }, async (
 		return;
 	}
 
-	if (!verifySignature(req.rawBody, req.get('WeBe-Signature'))) {
-		res.status(401).send('Invalid signature');
-		return;
-	}
-
 	const payload = parsePayload(req.rawBody);
 	if (!payload) {
 		res.status(400).send('Invalid payload');
@@ -123,7 +85,7 @@ export const webeEvents = onRequest({ timeoutSeconds: 10, cors: false }, async (
 		// Immediately refresh from WeBeFriends API to ensure Firestore stays in sync
 		try {
 			const refreshResult = await refreshFestivalContent(siteSlug, {
-				reason: 'webhook',
+				reason: 'manual',
 				correlationId,
 			});
 			if (refreshResult.status === 'processed') {
@@ -133,7 +95,7 @@ export const webeEvents = onRequest({ timeoutSeconds: 10, cors: false }, async (
 			console.warn(`[webe:${correlationId}] Failed to refresh after webhook.`, error);
 			// Don't fail the webhook response if refresh fails; the event was already processed
 		}
-		res.status(202).send('accepted');
+		res.status(200).send('processed');
 		return;
 	}
 

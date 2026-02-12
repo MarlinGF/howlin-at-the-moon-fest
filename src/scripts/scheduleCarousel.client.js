@@ -285,5 +285,6 @@ if (document.readyState === 'loading') {
 }
 
 document.addEventListener('astro:page-load', initAllCarousels);
+document.addEventListener('webe:schedule-ready', initAllCarousels);
 
 export {};
