@@ -34,7 +34,6 @@ const partnerSpotlightScriptUrl = (await import('../scripts/partnerSpotlight.cli
 const scheduleCarouselScriptUrl = (await import('../scripts/scheduleCarousel.client.js?url')).default;
 const galleryRevealScriptUrl = (await import('../scripts/galleryReveal.client.js?url')).default;
 const pageViewCounterScriptUrl = (await import('../scripts/pageViewCounter.js?url')).default;
-const runtimeEventsScriptUrl = (await import('../scripts/runtimeEvents.client.ts?url')).default;
 const eventModalScriptUrl = (await import('../scripts/eventModal.client.js?url')).default;
 
 const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
@@ -463,7 +462,9 @@ const nextHowlingHeading = 'Next Howling';
 	>
 		{JSON.stringify({ endpoint: '/api/events', timezone: festivalTimeZone })}
 	</script>
-	<script type="module" src={runtimeEventsScriptUrl}></script>
+	<script type="module" is:inline>
+		import '../scripts/runtimeEvents.client.ts';
+	</script>
 	<script type="module" src={eventModalScriptUrl}></script>
 	<script type="module" src={pageViewCounterScriptUrl}></script>
 
