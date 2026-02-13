@@ -1,6 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import GalleryModals from '../components/GalleryModals.astro';
+import groundsMapScriptUrl from '../scripts/groundsMap.client.js?url';
+import partnerSpotlightScriptUrl from '../scripts/partnerSpotlight.client.js?url';
+import scheduleCarouselScriptUrl from '../scripts/scheduleCarousel.client.js?url';
+import galleryRevealScriptUrl from '../scripts/galleryReveal.client.js?url';
+import pageViewCounterScriptUrl from '../scripts/pageViewCounter.js?url';
 import { fetchFestivalContent } from '../lib/webeFriendsClient';
 
 const festival = await fetchFestivalContent();
@@ -29,11 +34,6 @@ const mapPreferCloud =
 const mapLocationLabel = pageTitle;
 const mapCoverImage = '/images/howlin-map-cover.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
-const groundsMapScriptUrl = Astro.resolve('../scripts/groundsMap.client.js');
-const partnerSpotlightScriptUrl = Astro.resolve('../scripts/partnerSpotlight.client.js');
-const scheduleCarouselScriptUrl = Astro.resolve('../scripts/scheduleCarousel.client.js');
-const galleryRevealScriptUrl = Astro.resolve('../scripts/galleryReveal.client.js');
-const pageViewCounterScriptUrl = Astro.resolve('../scripts/pageViewCounter.js');
 
 const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
 const nextHowlingHeading = 'Next Howling';
