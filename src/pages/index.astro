@@ -6,6 +6,8 @@ import partnerSpotlightScriptUrl from '../scripts/partnerSpotlight.client.js?url
 import scheduleCarouselScriptUrl from '../scripts/scheduleCarousel.client.js?url';
 import galleryRevealScriptUrl from '../scripts/galleryReveal.client.js?url';
 import pageViewCounterScriptUrl from '../scripts/pageViewCounter.js?url';
+import runtimeEventsScriptUrl from '../scripts/runtimeEvents.client.ts?url';
+import eventModalScriptUrl from '../scripts/eventModal.client.js?url';
 import { fetchFestivalContent } from '../lib/webeFriendsClient';
 
 const festival = await fetchFestivalContent();
@@ -461,10 +463,8 @@ const nextHowlingHeading = 'Next Howling';
 	>
 		{JSON.stringify({ endpoint: '/api/events', timezone: festivalTimeZone })}
 	</script>
-	<script type="module" is:inline>
-		import '../scripts/runtimeEvents.client.ts';
-		import '../scripts/eventModal.client.ts';
-	</script>
+	<script type="module" src={runtimeEventsScriptUrl}></script>
+	<script type="module" src={eventModalScriptUrl}></script>
 	<script type="module" src={pageViewCounterScriptUrl}></script>
 
 </BaseLayout>
