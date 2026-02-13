@@ -29,13 +29,11 @@ const mapPreferCloud =
 const mapLocationLabel = pageTitle;
 const mapCoverImage = '/images/howlin-map-cover.png';
 const mapToggleLabel = hasMapsKey ? 'Click to view the map' : 'Add your map key to enable the map';
-const groundsMapScriptUrl = (await import('../scripts/groundsMap.client.js?url')).default;
-const partnerSpotlightScriptUrl = (await import('../scripts/partnerSpotlight.client.js?url')).default;
-const scheduleCarouselScriptUrl = (await import('../scripts/scheduleCarousel.client.js?url')).default;
-const galleryRevealScriptUrl = (await import('../scripts/galleryReveal.client.js?url')).default;
-const pageViewCounterScriptUrl = (await import('../scripts/pageViewCounter.js?url')).default;
-const eventModalScriptUrl = (await import('../scripts/eventModal.client.js?url')).default;
-const runtimeEventsScriptUrl = (await import('../scripts/runtimeEvents.client.ts?url')).default;
+const groundsMapScriptUrl = Astro.resolve('../scripts/groundsMap.client.js');
+const partnerSpotlightScriptUrl = Astro.resolve('../scripts/partnerSpotlight.client.js');
+const scheduleCarouselScriptUrl = Astro.resolve('../scripts/scheduleCarousel.client.js');
+const galleryRevealScriptUrl = Astro.resolve('../scripts/galleryReveal.client.js');
+const pageViewCounterScriptUrl = Astro.resolve('../scripts/pageViewCounter.js');
 
 const festivalTimeZone = import.meta.env.PUBLIC_FESTIVAL_TIMEZONE ?? 'America/Phoenix';
 const nextHowlingHeading = 'Next Howling';
@@ -463,8 +461,10 @@ const nextHowlingHeading = 'Next Howling';
 	>
 		{JSON.stringify({ endpoint: '/api/events', timezone: festivalTimeZone })}
 	</script>
-	<script type="module" src={runtimeEventsScriptUrl}></script>
-	<script type="module" src={eventModalScriptUrl}></script>
+	<script type="module" is:inline>
+		import '../scripts/runtimeEvents.client.ts';
+		import '../scripts/eventModal.client.ts';
+	</script>
 	<script type="module" src={pageViewCounterScriptUrl}></script>
 
 </BaseLayout>
