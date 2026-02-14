@@ -2,6 +2,7 @@ import type { Response } from 'express';
 import { onRequest } from 'firebase-functions/v2/https';
 
 import { firestore } from './firebaseAdmin';
+import { fetchLiveFestivalContent } from './webeIntegration';
 
 const SITES_COLLECTION = 'webeSites';
 const DEFAULT_SITE_SLUG = process.env.WEBE_SITE_SLUG ?? 'howlin-yuma';
@@ -176,8 +177,24 @@ export const eventsApi = onRequest({ cors: false }, async (req, res) => {
         return;
     }
 
+    const siteSlug = process.env.WEBE_SITE_SLUG ?? DEFAULT_SITE_SLUG;
+
     try {
-        const siteSlug = process.env.WEBE_SITE_SLUG ?? DEFAULT_SITE_SLUG;
+        const liveContent = await fetchLiveFestivalContent(siteSlug);
+        if (liveContent) {
+            res.set('Cache-Control', 'no-store');
+            res.status(200).json({
+                events: Array.isArray(liveContent.events) ? liveContent.events : [],
+                generatedAt: liveContent.meta.generatedAt,
+                source: liveContent.meta.sourcePageId ?? 'webe-api',
+            });
+            return;
+        }
+    } catch (error) {
+        console.error('eventsApi failed to fetch live content.', error);
+    }
+
+    try {
         const snapshot = await firestore.collection(SITES_COLLECTION).doc(siteSlug).get();
         if (!snapshot.exists) {
             res.status(404).json({ events: [] });

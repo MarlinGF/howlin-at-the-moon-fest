@@ -642,3 +642,8 @@ export const refreshFestivalContent = async (
 	console.info(`[webe:${correlationId}] Refreshed site ${siteSlug} from API.`);
 	return { status: 'processed' };
 };
+
+export const fetchLiveFestivalContent = async (siteSlug: string = DEFAULT_SITE_SLUG): Promise<FestivalContent | null> => {
+	const content = await fetchRemoteFestivalContent(siteSlug);
+	return content ? clone(content) : null;
+};
