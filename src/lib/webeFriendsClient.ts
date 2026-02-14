@@ -117,33 +117,9 @@ const writeCachedFestivalContent = async (siteSlug: string, content: FestivalCon
 	}
 };
 
-const fallbackFestivalContentTemplate: FestivalContent = {
-	meta: {
-		siteSlug: 'howlin-yuma',
-		siteName: "Howlin' At The Moon Fest",
-		sourcePageId: 'mock-page',
-		generatedAt: new Date().toISOString(),
-	},
-	hero: {
-		kicker: 'October 18 – 19 • Yuma Territorial Prison State Historic Park',
-		title: "Howlin' At The Moon Fest",
-		tagline: 'Desert nights. Cosmic sound. Infinite vibes.',
-		description:
-			'An immersive desert festival celebrating Southwestern artistry with luminous stages, collaborative installations, and stargazer sessions guided by local legends.',
-		primaryCta: { label: 'Get Tickets', href: '#tickets' },
-		secondaryCta: { label: 'View Lineup', href: '#schedule' },
-		background: {
-			src: '/images/hero/moonrise.svg',
-			alt: 'Illustrated moon hanging above glowing desert festival stages',
-		},
-	},
-	stats: [
-		{ label: 'Stages', value: 4 },
-		{ label: 'Artists', value: 24 },
-		{ label: 'Art Installations', value: 12 },
-		{ label: 'Miles of Neon', value: 6 },
-	],
-	events: [
+
+const fallbackFestivalContentTemplate: FestivalContent = (() => {
+	const eventsSeed: EventDetail[] = [
 		{
 			id: 'moonrise-ceremony',
 			title: 'Moonrise Ceremony',
@@ -240,8 +216,37 @@ const fallbackFestivalContentTemplate: FestivalContent = {
 			},
 			tags: ['featured', 'classic'],
 		},
-	],
-	schedule: {
+	];
+
+	return {
+		meta: {
+			siteSlug: 'howlin-yuma',
+			siteName: "Howlin' At The Moon Fest",
+			sourcePageId: 'mock-page',
+			generatedAt: new Date().toISOString(),
+		},
+		hero: {
+			kicker: 'October 18 – 19 • Yuma Territorial Prison State Historic Park',
+			title: "Howlin' At The Moon Fest",
+			tagline: 'Desert nights. Cosmic sound. Infinite vibes.',
+			description:
+				'An immersive desert festival celebrating Southwestern artistry with luminous stages, collaborative installations, and stargazer sessions guided by local legends.',
+			primaryCta: { label: 'Get Tickets', href: '#tickets' },
+			secondaryCta: { label: 'View Lineup', href: '#schedule' },
+			background: {
+				src: '/images/hero/moonrise.svg',
+				alt: 'Illustrated moon hanging above glowing desert festival stages',
+			},
+		},
+		stats: [
+			{ label: 'Stages', value: 4 },
+			{ label: 'Artists', value: 24 },
+			{ label: 'Art Installations', value: 12 },
+			{ label: 'Miles of Neon', value: 6 },
+		],
+		events: eventsSeed,
+		eventsAll: eventsSeed,
+		schedule: {
 		days: [
 			{
 				dayLabel: 'Friday',
@@ -262,8 +267,8 @@ const fallbackFestivalContentTemplate: FestivalContent = {
 		{ src: '/images/gallery/dome-lights.svg', alt: 'Light dome pulsing with color' },
 		{ src: '/images/gallery/fire-dancers.svg', alt: 'Fire dancers performing at night' },
 		{ src: '/images/gallery/drone-show.svg', alt: 'Drone show forming a wolf howling' },
-	],
-	sponsors: [
+		],
+		sponsors: [
 		{
 			name: 'Lunar Labs',
 			tier: 'Premier',
@@ -305,8 +310,9 @@ const fallbackFestivalContentTemplate: FestivalContent = {
 			answer:
 				'Layered clothing, a refillable water bottle, comfortable footwear for uneven terrain, and a light to guide your way between stages.',
 		},
-	],
-};
+		],
+	};
+})();
 
 function clone<T>(value: T): T {
 	if (typeof structuredClone === 'function') {

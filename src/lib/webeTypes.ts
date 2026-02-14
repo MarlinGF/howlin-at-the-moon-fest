@@ -75,6 +75,7 @@ export type FestivalContent = {
 	hero?: HeroBlock;
 	stats: FestivalStat[];
 	events: EventDetail[];
+	eventsAll: EventDetail[];
 	schedule: Schedule;
 	gallery: ImageAsset[];
 	sponsors: Sponsor[];
