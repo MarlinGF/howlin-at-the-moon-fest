@@ -1,30 +1,7 @@
-type RuntimeEvent = {
-    id: string;
-    title: string;
-    stage: string;
-    dayLabel: string;
-    area: string;
-    start: string;
-    end: string;
-    description: string;
-    image?: { src: string; alt?: string };
-    tags?: string[];
-};
-
-type EventsResponse = {
-    events?: RuntimeEvent[];
-};
-
-type EventsConfig = {
-    endpoint?: string;
-    timezone?: string;
-};
-
 const FALLBACK_ENDPOINT = '/api/events';
 const DEFAULT_TIMEZONE = 'America/Phoenix';
 const GATES_OPEN_FALLBACK = '10:00 AM';
-
-const readConfigElement = (): EventsConfig | null => {
+const readConfigElement = () => {
     const element = document.getElementById('runtime-events-config');
     if (!element) {
         return null;
@@ -34,28 +11,27 @@ const readConfigElement = (): EventsConfig | null => {
         return null;
     }
     try {
-        return JSON.parse(raw) as EventsConfig;
-    } catch (error) {
+        return JSON.parse(raw);
+    }
+    catch (error) {
         console.warn('Unable to parse runtime events config. Falling back to defaults.', error);
         return null;
     }
 };
-
-const getConfig = (): Required<EventsConfig> => {
+const getConfig = () => {
     const config = readConfigElement() ?? {};
     return {
         endpoint: config.endpoint ?? FALLBACK_ENDPOINT,
         timezone: config.timezone ?? DEFAULT_TIMEZONE,
     };
 };
-
-const formatTimeFactory = (timeZone: string) => {
+const formatTimeFactory = (timeZone) => {
     const formatter = new Intl.DateTimeFormat('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         timeZone,
     });
-    return (value: string) => {
+    return (value) => {
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) {
             return value;
@@ -63,8 +39,7 @@ const formatTimeFactory = (timeZone: string) => {
         return formatter.format(date);
     };
 };
-
-const getHeading = (events: RuntimeEvent[]): string => {
+const getHeading = (events) => {
     if (events.length === 0) {
         return 'Next Howling';
     }
@@ -72,7 +47,7 @@ const getHeading = (events: RuntimeEvent[]): string => {
         .map((event) => new Date(event.start))
         .filter((date) => !Number.isNaN(date.getTime()))
         .sort((a, b) => a.getTime() - b.getTime());
-    const keyed = new Map<string, Date>();
+    const keyed = new Map();
     dates.forEach((date) => {
         const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         if (!keyed.has(key)) {
@@ -83,15 +58,18 @@ const getHeading = (events: RuntimeEvent[]): string => {
     if (uniqueDates.length === 0) {
         return 'Next Howling';
     }
-    const formatLabel = (date: Date, includeMonth = true) => {
+    const formatLabel = (date, includeMonth = true) => {
         const month = date.toLocaleString('en-US', { month: 'short' });
         const day = date.getDate();
         const suffix = (() => {
             const mod10 = day % 10;
             const mod100 = day % 100;
-            if (mod10 === 1 && mod100 !== 11) return 'st';
-            if (mod10 === 2 && mod100 !== 12) return 'nd';
-            if (mod10 === 3 && mod100 !== 13) return 'rd';
+            if (mod10 === 1 && mod100 !== 11)
+                return 'st';
+            if (mod10 === 2 && mod100 !== 12)
+                return 'nd';
+            if (mod10 === 3 && mod100 !== 13)
+                return 'rd';
             return 'th';
         })();
         return includeMonth ? `${month} ${day}${suffix}` : `${day}${suffix}`;
@@ -106,8 +84,7 @@ const getHeading = (events: RuntimeEvent[]): string => {
     }
     return `Next Howling ${formatLabel(first)} & ${formatLabel(second)}`;
 };
-
-const createHighlightCard = (event: RuntimeEvent, formatTime: (value: string) => string): HTMLElement => {
+const createHighlightCard = (event, formatTime) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className =
@@ -121,23 +98,15 @@ const createHighlightCard = (event: RuntimeEvent, formatTime: (value: string) =>
             <p class="text-sm text-slate-300">${formatTime(event.start)} • ${event.dayLabel}</p>
             <div class="flex flex-wrap gap-2">
                 ${(event.tags ?? [])
-                    .map((tag) => `<span class="rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-200">${tag.replace('-', ' ')}</span>`)
-                    .join('')}
+        .map((tag) => `<span class="rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-fuchsia-200">${tag.replace('-', ' ')}</span>`)
+        .join('')}
             </div>
         </div>
     `;
     return button;
 };
-
-type ScheduleGroup = {
-    dayLabel: string;
-    dateLabel: string;
-    timestamp: number;
-    events: RuntimeEvent[];
-};
-
-const groupEventsByDay = (events: RuntimeEvent[]): ScheduleGroup[] => {
-    const groups = new Map<string, { dayLabel: string; date: Date; events: RuntimeEvent[] }>();
+const groupEventsByDay = (events) => {
+    const groups = new Map();
     events.forEach((event) => {
         const startDate = new Date(event.start);
         if (Number.isNaN(startDate.getTime())) {
@@ -152,19 +121,14 @@ const groupEventsByDay = (events: RuntimeEvent[]): ScheduleGroup[] => {
     });
     return Array.from(groups.values())
         .map((entry) => ({
-            dayLabel: entry.dayLabel,
-            dateLabel: entry.date.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
-            timestamp: entry.date.getTime(),
-            events: entry.events.sort((a, b) => Date.parse(a.start) - Date.parse(b.start)),
-        }))
+        dayLabel: entry.dayLabel,
+        dateLabel: entry.date.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+        timestamp: entry.date.getTime(),
+        events: entry.events.sort((a, b) => Date.parse(a.start) - Date.parse(b.start)),
+    }))
         .sort((a, b) => a.timestamp - b.timestamp);
 };
-
-const createScheduleCard = (
-    group: ScheduleGroup,
-    index: number,
-    formatTime: (value: string) => string
-): HTMLElement => {
+const createScheduleCard = (group, index, formatTime) => {
     const card = document.createElement('div');
     card.className =
         'flex min-w-[85vw] flex-shrink-0 snap-center flex-col gap-6 rounded-3xl border border-slate-800 bg-slate-900/60 p-8 transition-transform lg:min-w-0';
@@ -173,7 +137,8 @@ const createScheduleCard = (
         card.dataset.mobileHidden = 'true';
         card.classList.add('hidden');
         card.classList.add('lg:flex');
-    } else {
+    }
+    else {
         card.dataset.mobileHidden = 'false';
     }
     card.innerHTML = `
@@ -186,7 +151,7 @@ const createScheduleCard = (
         </div>
         <ul class="space-y-4">
             ${group.events
-                .map((event) => `
+        .map((event) => `
                     <li class="flex flex-col gap-2 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 transition hover:border-fuchsia-400/70">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div>
@@ -206,14 +171,13 @@ const createScheduleCard = (
                         </div>
                     </li>
                 `)
-                .join('') ||
-            '<li class="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-sm text-slate-400">Set list coming soon. Check back once new events are assigned in WeBeFriends.</li>'}
+        .join('') ||
+        '<li class="rounded-2xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-sm text-slate-400">Set list coming soon. Check back once new events are assigned in WeBeFriends.</li>'}
         </ul>
     `;
     return card;
 };
-
-const createModal = (event: RuntimeEvent, formatTime: (value: string) => string): HTMLDialogElement => {
+const createModal = (event, formatTime) => {
     const dialog = document.createElement('dialog');
     dialog.id = `modal-${event.id}`;
     dialog.dataset.eventModal = 'true';
@@ -221,10 +185,7 @@ const createModal = (event: RuntimeEvent, formatTime: (value: string) => string)
         'backdrop:bg-slate-950/80 w-full max-w-2xl rounded-3xl border border-slate-700/60 bg-slate-900/95 p-0 text-slate-100 shadow-2xl';
     dialog.setAttribute('aria-labelledby', `modal-title-${event.id}`);
     const tagMarkup = (event.tags ?? [])
-        .map(
-            (tag) =>
-                `<li class="rounded-full border border-slate-600/70 bg-slate-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-100">${tag.replace('-', ' ')}</li>`
-        )
+        .map((tag) => `<li class="rounded-full border border-slate-600/70 bg-slate-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-100">${tag.replace('-', ' ')}</li>`)
         .join('');
     dialog.innerHTML = `
         <div class="flex flex-col gap-6 p-8">
@@ -259,9 +220,8 @@ const createModal = (event: RuntimeEvent, formatTime: (value: string) => string)
     `;
     return dialog;
 };
-
-const renderHighlights = (events: RuntimeEvent[], formatTime: (value: string) => string) => {
-    const container = document.querySelector<HTMLElement>('[data-event-highlights]');
+const renderHighlights = (events, formatTime) => {
+    const container = document.querySelector('[data-event-highlights]');
     if (!container) {
         return;
     }
@@ -275,10 +235,9 @@ const renderHighlights = (events: RuntimeEvent[], formatTime: (value: string) =>
         container.appendChild(createHighlightCard(event, formatTime));
     });
 };
-
-const renderSchedule = (events: RuntimeEvent[], formatTime: (value: string) => string) => {
-    const container = document.querySelector<HTMLElement>('[data-event-schedule]');
-    const showMoreButton = document.querySelector<HTMLButtonElement>('[data-schedule-show-more]');
+const renderSchedule = (events, formatTime) => {
+    const container = document.querySelector('[data-event-schedule]');
+    const showMoreButton = document.querySelector('[data-schedule-show-more]');
     if (!container) {
         return;
     }
@@ -301,15 +260,15 @@ const renderSchedule = (events: RuntimeEvent[], formatTime: (value: string) => s
         if (groups.length > 3) {
             showMoreButton.classList.remove('hidden');
             showMoreButton.setAttribute('aria-hidden', 'false');
-        } else {
+        }
+        else {
             showMoreButton.classList.add('hidden');
             showMoreButton.setAttribute('aria-hidden', 'true');
         }
     }
     document.dispatchEvent(new CustomEvent('webe:schedule-ready'));
 };
-
-const renderModals = (events: RuntimeEvent[], formatTime: (value: string) => string) => {
+const renderModals = (events, formatTime) => {
     const container = document.querySelector('[data-event-modals-root]');
     if (!container) {
         return;
@@ -320,40 +279,36 @@ const renderModals = (events: RuntimeEvent[], formatTime: (value: string) => str
     });
     document.dispatchEvent(new CustomEvent('webe:event-modals-ready'));
 };
-
-const updateHeading = (events: RuntimeEvent[]) => {
-    const heading = document.querySelector<HTMLElement>('[data-next-howling-heading]');
+const updateHeading = (events) => {
+    const heading = document.querySelector('[data-next-howling-heading]');
     if (!heading) {
         return;
     }
     heading.textContent = getHeading(events);
 };
-
-const fetchEvents = async (endpoint: string): Promise<RuntimeEvent[]> => {
+const fetchEvents = async (endpoint) => {
     const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
     if (!response.ok) {
         throw new Error(`eventsApi responded with ${response.status}`);
     }
-    const payload = (await response.json()) as EventsResponse;
+    const payload = (await response.json());
     if (!payload || !Array.isArray(payload.events)) {
         return [];
     }
     return payload.events;
 };
-
 const renderErrorStates = () => {
-    const highlightContainer = document.querySelector<HTMLElement>('[data-event-highlights]');
+    const highlightContainer = document.querySelector('[data-event-highlights]');
     if (highlightContainer) {
         highlightContainer.innerHTML =
             '<div class="rounded-3xl border border-rose-800/60 bg-rose-950/50 p-6 text-sm text-rose-100">Unable to load upcoming events right now.</div>';
     }
-    const scheduleContainer = document.querySelector<HTMLElement>('[data-event-schedule]');
+    const scheduleContainer = document.querySelector('[data-event-schedule]');
     if (scheduleContainer) {
         scheduleContainer.innerHTML =
             '<div class="rounded-3xl border border-rose-800/60 bg-rose-950/50 p-6 text-sm text-rose-100">Unable to load the schedule at this time.</div>';
     }
 };
-
 const bootstrapEvents = async () => {
     try {
         const config = getConfig();
@@ -363,18 +318,18 @@ const bootstrapEvents = async () => {
         renderHighlights(events, formatTime);
         renderSchedule(events, formatTime);
         renderModals(events, formatTime);
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Failed to hydrate runtime events.', error);
         renderErrorStates();
     }
 };
-
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         void bootstrapEvents();
     });
-} else {
+}
+else {
     void bootstrapEvents();
 }
-
 export {};

@@ -65,7 +65,7 @@ The shared visitor counter lives at `src/pages/api/visitor-count.ts`. It uses Fi
 
 - `functions/src/eventsApi.ts` exposes an `eventsApi` HTTPS function that reads the latest WeBe snapshot from `webeSites/{siteSlug}`, filters to published, upcoming events (allowing a 24-hour grace window), and returns JSON.
 - Firebase Hosting rewrites `/api/events` to that function so the static site can fetch live data without enabling full SSR.
-- `src/scripts/runtimeEvents.client.ts` runs on every page load, fetches `/api/events`, and renders the highlights grid, schedule carousel, and modal dialogs dynamically. When the feed is empty it displays graceful placeholder messaging.
+- `src/scripts/runtimeEvents.client.js` runs on every page load, fetches `/api/events`, and renders the highlights grid, schedule carousel, and modal dialogs dynamically. When the feed is empty it displays graceful placeholder messaging.
 - The visitor never needs a rebuild to see updates—webhooks refresh Firestore, and the runtime fetch picks up the changes immediately.
 
 ## Data Notes
