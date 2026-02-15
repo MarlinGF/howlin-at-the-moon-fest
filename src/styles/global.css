@@ -12,6 +12,39 @@ dialog[data-event-modal="true"]::backdrop {
 	backdrop-filter: blur(12px);
 }
 
+/* Preserve structured markup coming from WeBeFriends rich text descriptions */
+[data-event-description] {
+	font-size: 1rem;
+	line-height: 1.7;
+}
+
+[data-event-description] p {
+	margin: 0;
+}
+
+[data-event-description] p + * {
+	margin-top: 1rem;
+}
+
+[data-event-description] ul,
+[data-event-description] ol {
+	margin: 0;
+	padding-left: 1.25rem;
+	color: inherit;
+}
+
+[data-event-description] ul {
+	list-style: disc;
+}
+
+[data-event-description] ol {
+	list-style: decimal;
+}
+
+[data-event-description] li + li {
+	margin-top: 0.35rem;
+}
+
 
 .partner-card--footer {
 	margin: 2rem auto 0;

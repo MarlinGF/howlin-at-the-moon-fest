@@ -214,7 +214,7 @@ const createModal = (event, formatTime) => {
                     <span>${event.area}</span>
                 </div>
             </div>
-            <p class="text-base leading-relaxed text-slate-100">${event.description}</p>
+            <div class="space-y-4 text-base leading-relaxed text-slate-100" data-event-description>${event.description}</div>
             ${tagMarkup ? `<ul class="flex flex-wrap gap-2">${tagMarkup}</ul>` : ''}
         </div>
     `;
