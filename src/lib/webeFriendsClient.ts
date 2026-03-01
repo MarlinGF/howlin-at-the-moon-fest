@@ -671,6 +671,6 @@ export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG)
 		expiresAt: now + 120_000,
 		staleAt: now + 420_000,
 	});
-	void writeCachedFestivalContent(siteSlug, refreshedFallback);
+	// Never persist mock fallback content to Firestore; this can overwrite real integration data.
 	return clone(refreshedFallback);
 }
