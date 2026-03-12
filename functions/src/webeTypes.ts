@@ -3,6 +3,18 @@ export type ImageAsset = {
 	alt: string;
 };
 
+export type VideoAsset = {
+	src: string;
+	title?: string;
+	description?: string;
+	poster?: string;
+	autoplay?: boolean;
+	loop?: boolean;
+	muted?: boolean;
+	playsinline?: boolean;
+	placement?: string[];
+};
+
 export type CtaLink = {
 	label: string;
 	href: string;
@@ -59,6 +71,32 @@ export type FaqItem = {
 	answer: string;
 };
 
+export type PopupBlock = {
+	id: string;
+	title: string;
+	message?: string;
+	placement: string[];
+	enabled: boolean;
+	dismissible: boolean;
+	primaryCta?: CtaLink;
+	secondaryCta?: CtaLink;
+};
+
+export type MediaCollection = {
+	id: string;
+	title?: string;
+	description?: string;
+	items: Array<ImageAsset | VideoAsset>;
+	enabled: boolean;
+};
+
+export type ConnectedModule = {
+	type: string;
+	enabled: boolean;
+	source: 'top-level' | 'block';
+	itemCount: number;
+};
+
 export type IntegrationMeta = {
 	siteSlug: string;
 	siteName: string;
@@ -75,8 +113,13 @@ export type FestivalContent = {
 	hero?: HeroBlock;
 	stats: FestivalStat[];
 	events: EventDetail[];
+	eventsAll: EventDetail[];
 	schedule: Schedule;
 	gallery: ImageAsset[];
+	popups: PopupBlock[];
+	videos: VideoAsset[];
+	mediaCollections: MediaCollection[];
 	sponsors: Sponsor[];
 	faqs: FaqItem[];
+	modules: ConnectedModule[];
 };

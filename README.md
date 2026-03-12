@@ -72,6 +72,7 @@ The shared visitor counter lives at `src/pages/api/visitor-count.ts`. It uses Fi
 
 - `fetchFestivalContent()` still hydrates hero, stats, gallery, sponsors, and FAQ copy during the Astro build, but events themselves now render exclusively through the runtime endpoint.
 - Every payload section (hero, stats, events, schedule, gallery, sponsors, FAQs) is optional. The UI hides sections automatically when a bundle is disabled.
+- Future WeBe block mappings live in one place: `src/lib/connectedModules.ts` (`moduleTypeAliasMap` and the `switch (block.type)` branch in `extractConnectedModules`).
 - If the remote request fails or the key is invalid/rotated, the build falls back to the last cached response; if none exists it falls back to a local mock festival dataset.
 - Image assets stream directly from WeBeFriends. Swap any bespoke placeholders in `public/images/` once final art is available.
 - Incoming `events.changed` webhooks land on the `webeEvents` Cloud Function, which validates the managed `WEBE_WEBHOOK_SECRET`, de-duplicates retries, and updates the Firestore cache so deletions disappear instantly and updates reorder chronologically.

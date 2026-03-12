@@ -1,6 +1,9 @@
 import { firestore } from './firebaseAdmin';
+import type { ConnectedModulePayload } from './connectedModules';
+import { extractConnectedModules } from './connectedModules';
 import { buildScheduleFromEvents, filterUpcomingEvents } from './eventUtils';
 import type {
+	ConnectedModule,
 	CtaLink,
 	EventDetail,
 	FaqItem,
@@ -9,9 +12,12 @@ import type {
 	HeroBlock,
 	ImageAsset,
 	IntegrationMeta,
+	MediaCollection,
+	PopupBlock,
 	Schedule,
 	ScheduleDay,
 	Sponsor,
+	VideoAsset,
 } from './webeTypes';
 
 export type {
@@ -19,34 +25,21 @@ export type {
 	EventDetail,
 	FaqItem,
 	FestivalContent,
+	ConnectedModule,
 	FestivalStat,
 	HeroBlock,
 	ImageAsset,
 	IntegrationMeta,
+	MediaCollection,
+	PopupBlock,
 	Schedule,
 	ScheduleDay,
 	Sponsor,
+	VideoAsset,
 } from './webeTypes';
 
-type EventDetailPayload = Omit<EventDetail, 'description' | 'image' | 'tags' | 'metadata'> & {
-	description?: string;
-	image?: ImageAsset;
-	tags?: string[];
-	metadata?: Record<string, unknown>;
-	date?: string;
-};
-
-type IntegrationApiResponse = {
+type IntegrationApiResponse = ConnectedModulePayload & {
 	meta?: Partial<IntegrationMeta>;
-	hero?: HeroBlock;
-	stats?: FestivalStat[];
-	events?: EventDetailPayload[];
-	schedule?: {
-		days?: ScheduleDay[];
-	};
-	gallery?: ImageAsset[];
-	sponsors?: Sponsor[];
-	faqs?: FaqItem[];
 };
 
 type CacheEntry = {
@@ -262,12 +255,25 @@ const fallbackFestivalContentTemplate: FestivalContent = (() => {
 			},
 		],
 	},
-	gallery: [
+		gallery: [
 		{ src: '/images/gallery/lantern-walk.svg', alt: 'Guests walking with paper lanterns' },
 		{ src: '/images/gallery/dome-lights.svg', alt: 'Light dome pulsing with color' },
 		{ src: '/images/gallery/fire-dancers.svg', alt: 'Fire dancers performing at night' },
 		{ src: '/images/gallery/drone-show.svg', alt: 'Drone show forming a wolf howling' },
 		],
+		popups: [],
+		videos: [
+			{
+				src: '/videos/howl-crowd.mp4',
+				title: 'Crowd highlight reel from Howlin at the Moon',
+				autoplay: true,
+				loop: true,
+				muted: true,
+				playsinline: true,
+				placement: ['hero', 'frontpage'],
+			},
+		],
+		mediaCollections: [],
 		sponsors: [
 		{
 			name: 'Lunar Labs',
@@ -311,6 +317,7 @@ const fallbackFestivalContentTemplate: FestivalContent = (() => {
 				'Layered clothing, a refillable water bottle, comfortable footwear for uneven terrain, and a light to guide your way between stages.',
 		},
 		],
+		modules: [],
 	};
 })();
 
@@ -321,54 +328,16 @@ function clone<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function coerceArray<T>(value: unknown): T[] {
-	if (Array.isArray(value)) {
-		return value as T[];
-	}
-	if (isRecord(value)) {
-		const withData = value as { data?: unknown; items?: unknown } & Record<string, unknown>;
-		if (Array.isArray(withData.data)) {
-			return withData.data as T[];
-		}
-		if (Array.isArray(withData.items)) {
-			return withData.items as T[];
-		}
-		return Object.values(value) as T[];
-	}
-	return [];
-}
-
-function normalizeScheduleDay(input: unknown): ScheduleDay | null {
-	if (!isRecord(input)) {
-		return null;
-	}
-	const dayLabelRaw = input.dayLabel;
-	const dateLabelRaw = input.dateLabel;
-	const gatesOpenRaw = input.gatesOpen;
-	const eventIdsRaw = input.eventIds;
-	if (typeof dayLabelRaw !== 'string' || dayLabelRaw.trim().length === 0) {
-		return null;
-	}
-	if (typeof dateLabelRaw !== 'string' || dateLabelRaw.trim().length === 0) {
-		return null;
-	}
-	const gatesOpen = typeof gatesOpenRaw === 'string' && gatesOpenRaw.trim().length > 0 ? gatesOpenRaw : '10:00 AM';
-	const eventIds = coerceArray<unknown>(eventIdsRaw).filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
-	return {
-		dayLabel: dayLabelRaw,
-		dateLabel: dateLabelRaw,
-		gatesOpen,
-		eventIds,
-	};
-}
-
 function createFallbackFestivalContent(): FestivalContent {
 	const fallback = clone(fallbackFestivalContentTemplate);
 	fallback.meta.generatedAt = new Date().toISOString();
+	fallback.modules = [
+		{ type: 'hero', enabled: Boolean(fallback.hero), source: 'top-level', itemCount: fallback.hero ? 1 : 0 },
+		{ type: 'stats', enabled: fallback.stats.length > 0, source: 'top-level', itemCount: fallback.stats.length },
+		{ type: 'events', enabled: fallback.events.length > 0, source: 'top-level', itemCount: fallback.events.length },
+		{ type: 'gallery', enabled: fallback.gallery.length > 0, source: 'top-level', itemCount: fallback.gallery.length },
+		{ type: 'video', enabled: fallback.videos.length > 0, source: 'top-level', itemCount: fallback.videos.length },
+	];
 	const fallbackGates = new Map<string, string>();
 	fallback.schedule.days.forEach((day) => {
 		fallbackGates.set(day.dayLabel, day.gatesOpen);
@@ -391,7 +360,12 @@ function createFallbackFestivalContent(): FestivalContent {
 function refreshFestivalContent(content: FestivalContent, options?: { now?: Date }): FestivalContent {
 	const pivot = options?.now ?? new Date();
 	const copy = clone(content);
-	const upcoming = filterUpcomingEvents(copy.events, { now: pivot });
+	copy.popups = Array.isArray(copy.popups) ? copy.popups : [];
+	copy.videos = Array.isArray(copy.videos) ? copy.videos : [];
+	copy.mediaCollections = Array.isArray(copy.mediaCollections) ? copy.mediaCollections : [];
+	copy.modules = Array.isArray(copy.modules) ? copy.modules : [];
+	const sourceEvents = Array.isArray(copy.eventsAll) && copy.eventsAll.length > 0 ? copy.eventsAll : copy.events;
+	const upcoming = filterUpcomingEvents(sourceEvents, { now: pivot });
 	const fallbackGates = new Map<string, string>();
 	const includeEmptyDays: ScheduleDay[] = [];
 	if (copy.schedule && Array.isArray(copy.schedule.days)) {
@@ -405,85 +379,13 @@ function refreshFestivalContent(content: FestivalContent, options?: { now?: Date
 			});
 		});
 	}
+	copy.eventsAll = sourceEvents.map((event) => ({ ...event }));
 	copy.events = upcoming;
 	copy.schedule = buildScheduleFromEvents(upcoming, {
 		fallbackGates,
 		includeEmptyDays,
 	});
 	return copy;
-}
-
-function normalizeEventDetail(event: EventDetailPayload): EventDetail | null {
-	if (!event || !event.id || !event.title || !event.stage || !event.dayLabel || !event.area || !event.start || !event.end) {
-		return null;
-	}
-	if (!event.image || !event.image.src) {
-		return null;
-	}
-	const tags = Array.isArray(event.tags)
-		? event.tags.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-		: [];
-	const detail: EventDetail = {
-		id: event.id,
-		title: event.title,
-		stage: event.stage,
-		dayLabel: event.dayLabel,
-		area: event.area,
-		start: event.start,
-		end: event.end,
-		description: event.description ?? '',
-		image: {
-			src: event.image.src,
-			alt: event.image.alt ?? '',
-		},
-		tags,
-	};
-	if (typeof event.slug === 'string' && event.slug.trim().length > 0) {
-		detail.slug = event.slug.trim();
-	}
-	if (typeof event.gatesOpenAt === 'string' && event.gatesOpenAt.trim().length > 0) {
-		detail.gatesOpenAt = event.gatesOpenAt.trim();
-	}
-	if (typeof event.date === 'string' && event.date.trim().length > 0) {
-		detail.dateLabel = event.date.trim();
-	}
-	if ('recurrence' in event && event.recurrence !== undefined) {
-		detail.recurrence = event.recurrence as EventDetail['recurrence'];
-	}
-	const knownKeys = new Set([
-		'id',
-		'title',
-		'stage',
-		'dayLabel',
-		'area',
-		'start',
-		'end',
-		'description',
-		'image',
-		'tags',
-		'slug',
-		'gatesOpenAt',
-		'date',
-		'dateLabel',
-		'recurrence',
-		'metadata',
-	]);
-	const metadata: Record<string, unknown> = {};
-	if (event.metadata && typeof event.metadata === 'object') {
-		Object.assign(metadata, event.metadata);
-	}
-	Object.entries(event as Record<string, unknown>).forEach(([key, value]) => {
-		if (knownKeys.has(key)) {
-			return;
-		}
-		if (value !== undefined && value !== null) {
-			metadata[key] = value;
-		}
-	});
-	if (Object.keys(metadata).length > 0) {
-		detail.metadata = metadata;
-	}
-	return detail;
 }
 
 function normalizeFestivalContent(payload: IntegrationApiResponse): FestivalContent | null {
@@ -495,12 +397,11 @@ function normalizeFestivalContent(payload: IntegrationApiResponse): FestivalCont
 	if (!siteSlug || !siteName || !sourcePageId) {
 		return null;
 	}
-	const events = coerceArray<EventDetailPayload>(payload.events)
-		.map(normalizeEventDetail)
-		.filter((event): event is EventDetail => Boolean(event));
-	const scheduleDays = coerceArray<unknown>(payload.schedule?.days)
-		.map(normalizeScheduleDay)
-		.filter((day): day is ScheduleDay => Boolean(day));
+	const extracted = extractConnectedModules(payload, {
+		logger: console,
+		sourcePageId,
+	});
+	const scheduleDays = extracted.scheduleDays;
 	const fallbackGates = new Map<string, string>();
 	scheduleDays.forEach((day) => {
 		fallbackGates.set(day.dayLabel, day.gatesOpen);
@@ -511,7 +412,8 @@ function normalizeFestivalContent(payload: IntegrationApiResponse): FestivalCont
 		gatesOpen: day.gatesOpen,
 		eventIds: [],
 	}));
-	const upcomingEvents = filterUpcomingEvents(events);
+	const eventsAll = extracted.eventsAll;
+	const upcomingEvents = filterUpcomingEvents(eventsAll);
 	const schedule = buildScheduleFromEvents(upcomingEvents, {
 		fallbackGates,
 		includeEmptyDays,
@@ -523,13 +425,18 @@ function normalizeFestivalContent(payload: IntegrationApiResponse): FestivalCont
 			sourcePageId,
 			generatedAt,
 		},
-		hero: payload.hero,
-		stats: coerceArray<FestivalStat>(payload.stats),
+		hero: extracted.hero,
+		stats: extracted.stats,
 		events: upcomingEvents,
+		eventsAll,
 		schedule,
-		gallery: coerceArray<ImageAsset>(payload.gallery),
-		sponsors: coerceArray<Sponsor>(payload.sponsors),
-		faqs: coerceArray<FaqItem>(payload.faqs),
+		gallery: extracted.gallery,
+		popups: extracted.popups,
+		videos: extracted.videos,
+		mediaCollections: extracted.mediaCollections,
+		sponsors: extracted.sponsors,
+		faqs: extracted.faqs,
+		modules: extracted.modules,
 	};
 }
 

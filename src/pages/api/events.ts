@@ -5,7 +5,7 @@ import { fetchFestivalContent } from '../../lib/webeFriendsClient';
 const jsonResponse = (body: unknown, init: ResponseInit = {}): Response => {
 	const headers = new Headers(init.headers ?? {});
 	headers.set('content-type', 'application/json');
-	headers.set('cache-control', headers.get('cache-control') ?? 'public, max-age=30, stale-while-revalidate=120');
+	headers.set('cache-control', headers.get('cache-control') ?? 'no-store');
 
 	return new Response(JSON.stringify(body), {
 		...init,

@@ -1,8 +1,11 @@
 import { Timestamp } from 'firebase-admin/firestore';
 
+import type { ConnectedModulePayload } from './connectedModules';
+import { extractConnectedModules } from './connectedModules';
 import { firestore } from './firebaseAdmin';
 import { buildScheduleFromEvents, filterUpcomingEvents } from './eventUtils';
 import type {
+	ConnectedModule,
 	EventDetail,
 	FaqItem,
 	FestivalContent,
@@ -10,9 +13,12 @@ import type {
 	HeroBlock,
 	ImageAsset,
 	IntegrationMeta,
+	MediaCollection,
+	PopupBlock,
 	Schedule,
 	ScheduleDay,
 	Sponsor,
+	VideoAsset,
 } from './webeTypes';
 
 type EventAction = 'created' | 'updated' | 'deleted';
@@ -25,19 +31,10 @@ type EventDetailPayload = Omit<EventDetail, 'description' | 'image' | 'tags' | '
 	date?: string;
 };
 
-type IntegrationApiResponse = {
+type IntegrationApiResponse = ConnectedModulePayload & {
 	type?: string;
 	action?: EventAction;
 	meta?: Partial<IntegrationMeta>;
-	hero?: HeroBlock;
-	stats?: FestivalStat[];
-	events?: EventDetailPayload[];
-	schedule?: {
-		days?: ScheduleDay[];
-	};
-	gallery?: ImageAsset[];
-	sponsors?: Sponsor[];
-	faqs?: FaqItem[];
 };
 
 type StoredEventDoc = {
@@ -236,12 +233,11 @@ const normalizeFestivalContent = (payload: IntegrationApiResponse): FestivalCont
 	if (!siteSlug || !siteName || !sourcePageId) {
 		return null;
 	}
-	const events = coerceArray<EventDetailPayload>(payload.events)
-		.map(normalizeEventDetail)
-		.filter((event): event is EventDetail => Boolean(event));
-	const scheduleDays = coerceArray<unknown>(payload.schedule?.days)
-		.map(normalizeScheduleDay)
-		.filter((day): day is ScheduleDay => Boolean(day));
+	const extracted = extractConnectedModules(payload, {
+		logger: console,
+		sourcePageId,
+	});
+	const scheduleDays = extracted.scheduleDays;
 	const fallbackGates = new Map<string, string>();
 	scheduleDays.forEach((day) => {
 		fallbackGates.set(day.dayLabel, day.gatesOpen);
@@ -252,7 +248,8 @@ const normalizeFestivalContent = (payload: IntegrationApiResponse): FestivalCont
 		gatesOpen: day.gatesOpen,
 		eventIds: [],
 	}));
-	const upcomingEvents = filterUpcomingEvents(events);
+	const eventsAll = extracted.eventsAll;
+	const upcomingEvents = filterUpcomingEvents(eventsAll);
 	const schedule = buildScheduleFromEvents(upcomingEvents, {
 		fallbackGates,
 		includeEmptyDays,
@@ -264,13 +261,18 @@ const normalizeFestivalContent = (payload: IntegrationApiResponse): FestivalCont
 			sourcePageId,
 			generatedAt,
 		},
-		hero: payload.hero,
-		stats: coerceArray<FestivalStat>(payload.stats),
+		hero: extracted.hero,
+		stats: extracted.stats,
 		events: upcomingEvents,
+		eventsAll,
 		schedule,
-		gallery: coerceArray<ImageAsset>(payload.gallery),
-		sponsors: coerceArray<Sponsor>(payload.sponsors),
-		faqs: coerceArray<FaqItem>(payload.faqs),
+		gallery: extracted.gallery,
+		popups: extracted.popups,
+		videos: extracted.videos,
+		mediaCollections: extracted.mediaCollections,
+		sponsors: extracted.sponsors,
+		faqs: extracted.faqs,
+		modules: extracted.modules,
 	};
 };
 
@@ -284,10 +286,15 @@ const createMinimalContent = (siteSlug: string, pageId?: string): FestivalConten
 	hero: undefined,
 	stats: [],
 	events: [],
+	eventsAll: [],
 	schedule: { days: [] },
 	gallery: [],
+	popups: [],
+	videos: [],
+	mediaCollections: [],
 	sponsors: [],
 	faqs: [],
+	modules: [],
 });
 
 const ensureSiteDocument = async (siteSlug: string, pageId?: string): Promise<FestivalContent> => {
@@ -359,7 +366,12 @@ const rebuildSiteSnapshot = async (siteSlug: string): Promise<FestivalContent> =
 	const merged: FestivalContent = {
 		...baseContent,
 		events: upcoming,
+		eventsAll: events,
 		schedule,
+		popups: Array.isArray(baseContent.popups) ? baseContent.popups : [],
+		videos: Array.isArray(baseContent.videos) ? baseContent.videos : [],
+		mediaCollections: Array.isArray(baseContent.mediaCollections) ? baseContent.mediaCollections : [],
+		modules: Array.isArray(baseContent.modules) ? baseContent.modules : [],
 	};
 	merged.meta = {
 		...baseContent.meta,
@@ -540,7 +552,8 @@ const syncEventsWithContent = async (
 	const batch = firestore.batch();
 	const triggeredTimestamp = Timestamp.fromDate(triggeredAt);
 	const now = Timestamp.now();
-	content.events.forEach((event) => {
+	const sourceEvents = Array.isArray(content.eventsAll) && content.eventsAll.length > 0 ? content.eventsAll : content.events;
+	sourceEvents.forEach((event) => {
 		const sanitised = serializeForStore(event);
 		const docRef = eventsRef.doc(event.id);
 		batch.set(
@@ -571,7 +584,7 @@ const syncEventsWithContent = async (
 			{ merge: true }
 		);
 	});
-	if (!snapshot.empty || content.events.length > 0) {
+	if (!snapshot.empty || sourceEvents.length > 0) {
 		await batch.commit();
 	}
 };
