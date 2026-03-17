@@ -53,7 +53,15 @@ type CachedFestivalContent = {
 	cachedAt?: string;
 };
 
-const API_BASE_URL = (import.meta.env.WEBE_API_BASE ?? 'https://webefriends.com/api/integrations').replace(/\/?$/, '');
+const DEFAULT_API_ORIGIN = 'https://webefriends.com';
+const API_BASE_URL = (() => {
+	const configured =
+		import.meta.env.WEBE_API_BASE_URL ??
+		import.meta.env.WEBE_API_BASE ??
+		DEFAULT_API_ORIGIN;
+	const trimmed = configured.replace(/\/+$/, '');
+	return trimmed.endsWith('/api/integrations') ? trimmed : `${trimmed}/api/integrations`;
+})();
 const DEFAULT_SITE_SLUG = import.meta.env.WEBE_SITE_SLUG ?? 'howlin-yuma';
 const API_KEY = import.meta.env.WEBE_API_KEY;
 
@@ -479,6 +487,7 @@ async function requestFestivalContent(siteSlug: string): Promise<{ content: Fest
 		const response = await fetch(url, {
 			headers: {
 				Accept: 'application/json',
+				Authorization: `Bearer ${API_KEY}`,
 				'Content-Type': 'application/json',
 				'User-Agent': 'HowlinIntegration/1.0 (+astro)',
 				'x-api-key': API_KEY,

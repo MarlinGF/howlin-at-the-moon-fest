@@ -100,4 +100,52 @@ describe('fetchFestivalContent', () => {
 		expect(result.events[0]?.start).toBe(cachedStart);
 		expect(mockFns.set).not.toHaveBeenCalled();
 	});
+
+	it('sends both authorization headers when requesting live content', async () => {
+		mockFns.get.mockResolvedValue({
+			exists: false,
+		});
+
+		const fetchMock = vi.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			headers: {
+				get: vi.fn().mockReturnValue('max-age=60'),
+			},
+			json: vi.fn().mockResolvedValue({
+				meta: {
+					siteSlug: 'howlin-yuma',
+					siteName: "Howlin' At The Moon Fest",
+					sourcePageId: 'webe-page',
+					generatedAt: new Date().toISOString(),
+				},
+				hero: {
+					title: 'Howlin',
+				},
+				events: [],
+				gallery: [],
+				popups: [],
+				videos: [],
+				sponsors: [],
+				faqs: [],
+			}),
+		});
+
+		vi.stubGlobal('fetch', fetchMock);
+		vi.stubEnv('WEBE_API_KEY', 'test-api-key');
+		vi.stubEnv('WEBE_API_BASE_URL', 'https://webefriends.com');
+
+		const { fetchFestivalContent } = await import('./webeFriendsClient');
+		await fetchFestivalContent('howlin-yuma');
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			'https://webefriends.com/api/integrations/howlin-yuma',
+			expect.objectContaining({
+				headers: expect.objectContaining({
+					Authorization: 'Bearer test-api-key',
+					'x-api-key': 'test-api-key',
+				}),
+			})
+		);
+	});
 });

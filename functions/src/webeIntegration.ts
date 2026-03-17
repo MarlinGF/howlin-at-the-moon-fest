@@ -80,7 +80,15 @@ const SITES_COLLECTION = 'webeSites';
 const EVENTS_SUBCOLLECTION = 'events';
 const DEFAULT_SITE_SLUG = process.env.WEBE_SITE_SLUG ?? 'howlin-yuma';
 const DEFAULT_SITE_NAME = "Howlin' At The Moon Fest";
-const API_BASE_URL = (process.env.WEBE_API_BASE ?? 'https://webefriends.com/api/integrations').replace(/\/?$/, '');
+const DEFAULT_API_ORIGIN = 'https://webefriends.com';
+const API_BASE_URL = (() => {
+	const configured =
+		process.env.WEBE_API_BASE_URL ??
+		process.env.WEBE_API_BASE ??
+		DEFAULT_API_ORIGIN;
+	const trimmed = configured.replace(/\/+$/, '');
+	return trimmed.endsWith('/api/integrations') ? trimmed : `${trimmed}/api/integrations`;
+})();
 const API_KEY = process.env.WEBE_API_KEY ?? '';
 
 const serializeForStore = <T>(value: T): T => {
@@ -601,6 +609,7 @@ const fetchRemoteFestivalContent = async (siteSlug: string): Promise<FestivalCon
 		const response = await fetch(url, {
 			headers: {
 				Accept: 'application/json',
+				Authorization: `Bearer ${API_KEY}`,
 				'Content-Type': 'application/json',
 				'User-Agent': 'HowlinIntegration/1.0 (+firebase-functions)',
 				'x-api-key': API_KEY,

@@ -30,18 +30,26 @@ The build command outputs a static site to `dist/`. Use `npm run preview` to val
 
 ## Environment Variables
 
-Create a `.env` file (or export variables in your shell) before running or building:
+Copy [`.env.example`](/Users/marlinandrews/Documents/Howlin-Build/.env.example) to `.env.local` before running or building:
 
 ```sh
+WEBE_API_BASE_URL="https://webefriends.com"
+WEBE_PAGE_ID="<WeBe page UID>"
+WEBE_SITE_SLUG="howlin-yuma"
 WEBE_API_KEY="<one-time key issued in Integration Studio>"
-WEBE_WEBHOOK_SECRET="<shared secret configured in Integration Studio>"
-# Optional overrides
-# WEBE_SITE_SLUG="howlin-yuma"
+WEBE_CHECKOUT_SUCCESS_URL="https://your-domain.example/checkout/success"
+WEBE_CHECKOUT_CANCEL_URL="https://your-domain.example/checkout/cancel"
+# Optional when webhook/cache invalidation is enabled
+# WEBE_WEBHOOK_URL="https://your-domain.example/api/webe/webhook"
+# WEBE_WEBHOOK_SECRET="<shared secret configured in Integration Studio>"
+# Temporary legacy fallback supported during migration only:
 # WEBE_API_BASE="https://webefriends.com/api/integrations"
 # PUBLIC_SITE_URL="https://your-prod-domain.example"
 # PUBLIC_GA_MEASUREMENT_ID="G-XXXXXXXXXX"
 # FIREBASE_SERVICE_ACCOUNT='{"projectId":"howling-vs-build",...}'
 ```
+
+This repo now follows the canonical connected-site naming for WeBe secrets: `WEBE_API_BASE_URL`, `WEBE_PAGE_ID`, `WEBE_SITE_SLUG`, `WEBE_API_KEY`, checkout URLs, and optional webhook/service-fee variables. `WEBE_API_BASE` is still read as a temporary compatibility shim, but new setups should use `WEBE_API_BASE_URL` only.
 
 `WEBE_API_KEY` is required for production data. If it is missing, the build falls back to local mock content so you can continue developing UI without external connectivity.
 
@@ -70,6 +78,7 @@ The shared visitor counter lives at `src/pages/api/visitor-count.ts`. It uses Fi
 
 ## Data Notes
 
+- WeBe requests are server-side only and now send both required auth headers: `Authorization: Bearer <api-key>` and `X-API-Key: <api-key>`.
 - `fetchFestivalContent()` still hydrates hero, stats, gallery, sponsors, and FAQ copy during the Astro build, but events themselves now render exclusively through the runtime endpoint.
 - Every payload section (hero, stats, events, schedule, gallery, sponsors, FAQs) is optional. The UI hides sections automatically when a bundle is disabled.
 - Future WeBe block mappings live in one place: `src/lib/connectedModules.ts` (`moduleTypeAliasMap` and the `switch (block.type)` branch in `extractConnectedModules`).
@@ -78,6 +87,25 @@ The shared visitor counter lives at `src/pages/api/visitor-count.ts`. It uses Fi
 - Incoming `events.changed` webhooks land on the `webeEvents` Cloud Function, which validates the managed `WEBE_WEBHOOK_SECRET`, de-duplicates retries, and updates the Firestore cache so deletions disappear instantly and updates reorder chronologically.
 - The current integration snapshot lives in Firestore under `webeSites/{siteSlug}`; `fetchFestivalContent()` first reads this cache so the static site reflects webhook changes without waiting for a rebuild.
 - A scheduled `webeNightlyRefresh` function re-syncs the full bundle from the WeBeFriends API every night to recover from any missed webhooks.
+
+## Validation
+
+Run the connected-site validation check before handoff:
+
+```sh
+npm run validate:webe
+```
+
+That command loads `.env.local`, performs the authenticated content fetch against `GET /api/integrations/<site-slug>`, and prints the key payload metadata. You can optionally dry-run checkout creation by setting:
+
+```sh
+WEBE_VALIDATE_MERCH_CHECKOUT=true
+WEBE_TEST_PRODUCT_ID="<real merch product id>"
+WEBE_VALIDATE_MUSIC_CHECKOUT=true
+WEBE_TEST_SONG_ID="<real song id>"
+```
+
+The validator uses the canonical merch lane (`/checkout`) and music lane (`/music/checkout`) separately, matching the connected-site standard.
 
 ## Next Steps
 
