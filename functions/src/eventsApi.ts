@@ -121,6 +121,7 @@ const setCorsHeaders = (res: Response) => {
 };
 
 export const eventsApi = onRequest({ cors: false }, async (req, res) => {
+    console.log('EVENTS FUNCTION HIT');
     setCorsHeaders(res);
 
     if (req.method === 'OPTIONS') {

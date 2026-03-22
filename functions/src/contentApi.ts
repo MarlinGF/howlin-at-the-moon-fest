@@ -85,6 +85,7 @@ const createEmptyContent = (siteSlug: string): FestivalContent => ({
 });
 
 export const contentApi = onRequest({ cors: false }, async (req, res) => {
+	console.log('CONTENT FUNCTION HIT');
 	setCorsHeaders(res);
 
 	if (req.method === 'OPTIONS') {

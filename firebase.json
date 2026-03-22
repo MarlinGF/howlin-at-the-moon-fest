@@ -6,6 +6,10 @@
       "**/.*",
       "**/node_modules/**",
       "**/.DS_Store",
+      "api/content",
+      "api/content/**",
+      "api/events",
+      "api/events/**",
       "api/visitor-count/**"
     ],
     "cleanUrls": true,
@@ -17,10 +21,6 @@
       },
       {
         "source": "/api/events",
-        "function": "eventsApi"
-      },
-      {
-        "source": "/runtime/events",
         "function": "eventsApi"
       },
       {
