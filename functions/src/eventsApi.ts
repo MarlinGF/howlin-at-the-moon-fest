@@ -3,7 +3,6 @@ import { onRequest } from 'firebase-functions/v2/https';
 
 import { selectFrontPagePopups } from './connectedModules';
 import { firestore } from './firebaseAdmin';
-import { filterUpcomingEvents } from './eventUtils';
 import type { EventDetail, ImageAsset, PopupBlock } from './webeTypes';
 import { fetchLiveFestivalContent } from './webeIntegration';
 
@@ -85,22 +84,6 @@ const normalizeEvent = (value: unknown): RuntimeEvent | null => {
     return normalized;
 };
 
-const resolveStatus = (event: RuntimeEvent): string => {
-    if (typeof event.status === 'string' && event.status.trim().length > 0) {
-        return event.status.trim().toLowerCase();
-    }
-    const metadataStatus = typeof event.metadata?.status === 'string' ? event.metadata.status : undefined;
-    if (metadataStatus && metadataStatus.trim().length > 0) {
-        return metadataStatus.trim().toLowerCase();
-    }
-    return 'published';
-};
-
-const filterEvents = (events: RuntimeEvent[], now: Date): EventDetail[] => {
-    const published = events.filter((event) => resolveStatus(event) === 'published');
-    return filterUpcomingEvents(published, { now });
-};
-
 const extractEvents = (data: unknown): unknown[] => {
     if (!isRecord(data)) {
         return [];
@@ -151,8 +134,6 @@ export const eventsApi = onRequest({ cors: false }, async (req, res) => {
     }
 
     const siteSlug = process.env.WEBE_SITE_SLUG ?? DEFAULT_SITE_SLUG;
-    const pivot = new Date();
-
     try {
         const liveContent = await fetchLiveFestivalContent(siteSlug);
         if (liveContent) {
@@ -161,11 +142,10 @@ export const eventsApi = onRequest({ cors: false }, async (req, res) => {
                 : Array.isArray(liveContent.events)
                     ? liveContent.events
                     : [];
-            const events = filterUpcomingEvents(sourceEvents, { now: pivot });
             const popups = selectFrontPagePopups(Array.isArray(liveContent.popups) ? liveContent.popups : []);
             res.set('Cache-Control', 'no-store');
             res.status(200).json({
-                events,
+                events: sourceEvents,
                 popups,
                 generatedAt: liveContent.meta.generatedAt,
                 source: liveContent.meta.sourcePageId ?? 'webe-api',
@@ -187,11 +167,10 @@ export const eventsApi = onRequest({ cors: false }, async (req, res) => {
         const normalized = rawEvents
             .map((entry) => normalizeEvent(entry))
             .filter((entry): entry is RuntimeEvent => Boolean(entry));
-        const filtered = filterEvents(normalized, pivot);
         const storedPopups = extractPopups(doc ?? {});
         const popups = selectFrontPagePopups(storedPopups);
         res.set('Cache-Control', 'no-store');
-        res.status(200).json({ events: filtered, popups });
+        res.status(200).json({ events: normalized, popups });
     } catch (error) {
         console.error('eventsApi failed to load events', error);
         res.status(500).json({ events: [], popups: [], error: 'Unable to load events' });

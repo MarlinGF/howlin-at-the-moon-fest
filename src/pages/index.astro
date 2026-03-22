@@ -59,7 +59,8 @@ const hasVideoShowcase = videoShowcase.length > 0;
 const hasFrontPagePopups = popups.length > 0;
 const showHighlightsSection = true;
 const showScheduleSection = true;
-const popupsEndpoint = '/api/events';
+const eventsEndpoint = import.meta.env.PROD ? '/runtime/events' : '/api/events';
+const popupsEndpoint = eventsEndpoint;
 const hasMapsKey = Boolean(import.meta.env.PUBLIC_GOOGLE_MAPS_KEY);
 const mapQueryRaw = (import.meta.env.PUBLIC_GOOGLE_MAPS_QUERY ?? 'Yuma Territorial Prison State Historic Park, Yuma AZ').trim();
 const mapZoomParsed = Number.parseInt(import.meta.env.PUBLIC_GOOGLE_MAPS_ZOOM ?? '', 10);
@@ -579,7 +580,7 @@ const nextHowlingHeading = 'Next Howling';
 		id="runtime-events-config"
 		type="application/json"
 		is:inline
-		set:html={JSON.stringify({ endpoint: '/api/events', timezone: festivalTimeZone })}
+		set:html={JSON.stringify({ endpoint: eventsEndpoint, timezone: festivalTimeZone })}
 	></script>
 	<script type="module" src={runtimeContentScriptUrl}></script>
 	<script type="module" src={runtimeEventsScriptUrl}></script>

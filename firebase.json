@@ -20,6 +20,10 @@
         "function": "eventsApi"
       },
       {
+        "source": "/runtime/events",
+        "function": "eventsApi"
+      },
+      {
         "source": "/api/content",
         "function": "contentApi"
       },
