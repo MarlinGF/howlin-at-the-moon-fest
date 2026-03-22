@@ -11,10 +11,15 @@ const readConfigElement = () => {
         return null;
     }
     try {
-        return JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            console.warn('Runtime events config parsed, but was not a valid object. Falling back to defaults.', parsed);
+            return null;
+        }
+        return parsed;
     }
     catch (error) {
-        console.warn('Unable to parse runtime events config. Falling back to defaults.', error);
+        console.warn('Unable to parse runtime events config. Falling back to defaults.', { raw, error });
         return null;
     }
 };
@@ -287,11 +292,13 @@ const updateHeading = (events) => {
     heading.textContent = getHeading(events);
 };
 const fetchEvents = async (endpoint) => {
+    console.log('FETCHING WEBE DATA (PROD)', endpoint);
     const response = await fetch(endpoint, { headers: { Accept: 'application/json' }, cache: 'no-store' });
     if (!response.ok) {
         throw new Error(`eventsApi responded with ${response.status}`);
     }
     const payload = (await response.json());
+    console.log('WEBE DATA RECEIVED', payload);
     if (!payload || !Array.isArray(payload.events)) {
         return [];
     }
@@ -311,6 +318,7 @@ const renderErrorStates = () => {
 };
 const bootstrapEvents = async () => {
     try {
+        console.log('RUNTIME EVENTS INIT OK');
         const config = getConfig();
         const formatTime = formatTimeFactory(config.timezone);
         const events = await fetchEvents(config.endpoint);

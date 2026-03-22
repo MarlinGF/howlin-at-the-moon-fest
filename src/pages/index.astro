@@ -573,16 +573,14 @@ const nextHowlingHeading = 'Next Howling';
 		id="runtime-content-config"
 		type="application/json"
 		is:inline
-	>
-		{JSON.stringify({ endpoint: '/api/content' })}
-	</script>
+		set:html={JSON.stringify({ endpoint: '/api/content' })}
+	></script>
 	<script
 		id="runtime-events-config"
 		type="application/json"
 		is:inline
-	>
-		{JSON.stringify({ endpoint: '/api/events', timezone: festivalTimeZone })}
-	</script>
+		set:html={JSON.stringify({ endpoint: '/api/events', timezone: festivalTimeZone })}
+	></script>
 	<script type="module" src={runtimeContentScriptUrl}></script>
 	<script type="module" src={runtimeEventsScriptUrl}></script>
 	<script type="module" src={eventModalScriptUrl}></script>
