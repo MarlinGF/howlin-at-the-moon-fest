@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 
-import { selectFrontPagePopups } from '../../lib/connectedModules';
 import { fetchFestivalContent } from '../../lib/webeFriendsClient';
 
 const jsonResponse = (body: unknown, init: ResponseInit = {}): Response => {
@@ -10,37 +9,45 @@ const jsonResponse = (body: unknown, init: ResponseInit = {}): Response => {
 
 	return new Response(JSON.stringify(body), {
 		...init,
-		headers
+		headers,
 	});
 };
 
 export const GET: APIRoute = async () => {
 	if (import.meta.env.PROD) {
 		return jsonResponse({
+			meta: {
+				siteSlug: 'howlin-yuma',
+				siteName: "Howlin' At The Moon Fest",
+				sourcePageId: 'webe-source-page',
+				generatedAt: new Date().toISOString(),
+			},
+			hero: undefined,
+			stats: [],
 			events: [],
+			eventsAll: [],
+			schedule: { days: [] },
+			gallery: [],
 			popups: [],
-			generatedAt: new Date().toISOString(),
-			source: 'webe-source-page',
+			videos: [],
+			mediaCollections: [],
+			sponsors: [],
+			faqs: [],
+			modules: [],
 		});
 	}
 
 	try {
 		const content = await fetchFestivalContent();
-		const popups = selectFrontPagePopups(content.popups ?? []);
-		return jsonResponse({
-			events: content.events ?? [],
-			popups,
-			generatedAt: content.meta.generatedAt,
-			source: content.meta.sourcePageId,
-		});
+		return jsonResponse(content);
 	} catch (error) {
-		console.error('Failed to load festival events', error);
+		console.error('Failed to load festival content', error);
 		return jsonResponse(
-			{ events: [], popups: [], error: 'Unable to load events' },
+			{ error: 'Unable to load content' },
 			{
 				status: 500,
-				statusText: 'Event fetch failed',
-				headers: { 'cache-control': 'no-store' }
+				statusText: 'Content fetch failed',
+				headers: { 'cache-control': 'no-store' },
 			}
 		);
 	}

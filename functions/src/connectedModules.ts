@@ -470,34 +470,55 @@ export const extractConnectedModules = (
 	const logger = options?.logger ?? console;
 	const modules: ConnectedModule[] = [];
 	const unknownTypes = new Set<string>();
-	let hero = normalizeHero(payload.hero);
-	const stats: FestivalStat[] = coerceArray<unknown>(payload.stats)
+	const topLevelHero = normalizeHero(payload.hero);
+	const topLevelStats: FestivalStat[] = coerceArray<unknown>(payload.stats)
 		.map((entry) => normalizeFestivalStat(entry))
 		.filter((entry): entry is FestivalStat => Boolean(entry));
-	const eventsAll: EventDetail[] = coerceArray<unknown>(payload.events)
+	const topLevelEvents: EventDetail[] = coerceArray<unknown>(payload.events)
 		.map((entry) => normalizeEvent(entry))
 		.filter((entry): entry is EventDetail => Boolean(entry));
-	const scheduleDays: ScheduleDay[] = coerceArray<unknown>(payload.schedule?.days)
+	const topLevelScheduleDays: ScheduleDay[] = coerceArray<unknown>(payload.schedule?.days)
 		.map((entry) => normalizeScheduleDay(entry))
 		.filter((entry): entry is ScheduleDay => Boolean(entry));
-	const gallery: ImageAsset[] = coerceArray<unknown>(payload.gallery)
+	const topLevelGallery: ImageAsset[] = coerceArray<unknown>(payload.gallery)
 		.map((entry) => normalizeImage(entry))
 		.filter((entry): entry is ImageAsset => Boolean(entry));
-	const popups: PopupBlock[] = coerceArray<unknown>(payload.popups)
+	const topLevelPopups: PopupBlock[] = coerceArray<unknown>(payload.popups)
 		.map((entry, index) => normalizePopup(entry, index))
 		.filter((entry): entry is PopupBlock => Boolean(entry));
-	const videos: VideoAsset[] = coerceArray<unknown>(payload.videos)
+	const topLevelVideos: VideoAsset[] = coerceArray<unknown>(payload.videos)
 		.map((entry) => normalizeVideo(entry))
 		.filter((entry): entry is VideoAsset => Boolean(entry));
-	const mediaCollections: MediaCollection[] = coerceArray<unknown>(payload.mediaCollections)
+	const topLevelMediaCollections: MediaCollection[] = coerceArray<unknown>(payload.mediaCollections)
 		.map((entry, index) => normalizeMediaCollection(entry, index))
 		.filter((entry): entry is MediaCollection => Boolean(entry));
-	const sponsors: Sponsor[] = coerceArray<unknown>(payload.sponsors)
+	const topLevelSponsors: Sponsor[] = coerceArray<unknown>(payload.sponsors)
 		.map((entry) => normalizeSponsor(entry))
 		.filter((entry): entry is Sponsor => Boolean(entry));
-	const faqs: FaqItem[] = coerceArray<unknown>(payload.faqs)
+	const topLevelFaqs: FaqItem[] = coerceArray<unknown>(payload.faqs)
 		.map((entry) => normalizeFaq(entry))
 		.filter((entry): entry is FaqItem => Boolean(entry));
+
+	let blockHero: HeroBlock | undefined;
+	let sawHeroBlock = false;
+	const blockStats: FestivalStat[] = [];
+	let sawStatsBlock = false;
+	const blockEvents: EventDetail[] = [];
+	let sawEventsBlock = false;
+	const blockScheduleDays: ScheduleDay[] = [];
+	let sawScheduleBlock = false;
+	const blockGallery: ImageAsset[] = [];
+	let sawGalleryBlock = false;
+	const blockPopups: PopupBlock[] = [];
+	let sawPopupBlock = false;
+	const blockVideos: VideoAsset[] = [];
+	let sawVideoBlock = false;
+	const blockMediaCollections: MediaCollection[] = [];
+	let sawMediaCollectionBlock = false;
+	const blockSponsors: Sponsor[] = [];
+	let sawSponsorsBlock = false;
+	const blockFaqs: FaqItem[] = [];
+	let sawFaqsBlock = false;
 
 	for (const entry of topLevelModuleEntries(payload)) {
 		modules.push({
@@ -522,90 +543,118 @@ export const extractConnectedModules = (
 		const dataList = Array.isArray(block.data) ? block.data : [block.data];
 		switch (block.type) {
 			case 'hero': {
+				sawHeroBlock = true;
 				const candidate = normalizeHero(block.data);
-				if (candidate) {
-					hero = candidate;
+				if (block.enabled && candidate) {
+					blockHero = candidate;
 				}
 				break;
 			}
 			case 'stats': {
-				stats.push(
-					...dataList
-						.map((entry) => normalizeFestivalStat(entry))
-						.filter((entry): entry is FestivalStat => Boolean(entry))
-				);
+				sawStatsBlock = true;
+				if (block.enabled) {
+					blockStats.push(
+						...dataList
+							.map((entry) => normalizeFestivalStat(entry))
+							.filter((entry): entry is FestivalStat => Boolean(entry))
+					);
+				}
 				break;
 			}
 			case 'events': {
-				eventsAll.push(
-					...coerceArray<unknown>(block.data)
-						.map((entry) => normalizeEvent(entry))
-						.filter((entry): entry is EventDetail => Boolean(entry))
-				);
+				sawEventsBlock = true;
+				if (block.enabled) {
+					blockEvents.push(
+						...coerceArray<unknown>(block.data)
+							.map((entry) => normalizeEvent(entry))
+							.filter((entry): entry is EventDetail => Boolean(entry))
+					);
+				}
 				break;
 			}
 			case 'schedule': {
-				scheduleDays.push(
-					...coerceArray<unknown>(block.data)
-						.map((entry) => normalizeScheduleDay(entry))
-						.filter((entry): entry is ScheduleDay => Boolean(entry))
-				);
+				sawScheduleBlock = true;
+				if (block.enabled) {
+					blockScheduleDays.push(
+						...coerceArray<unknown>(block.data)
+							.map((entry) => normalizeScheduleDay(entry))
+							.filter((entry): entry is ScheduleDay => Boolean(entry))
+					);
+				}
 				break;
 			}
 			case 'gallery': {
-				gallery.push(
-					...coerceArray<unknown>(block.data)
-						.map((entry) => normalizeImage(entry))
-						.filter((entry): entry is ImageAsset => Boolean(entry))
-				);
+				sawGalleryBlock = true;
+				if (block.enabled) {
+					blockGallery.push(
+						...coerceArray<unknown>(block.data)
+							.map((entry) => normalizeImage(entry))
+							.filter((entry): entry is ImageAsset => Boolean(entry))
+					);
+				}
 				break;
 			}
 			case 'popup': {
-				const popupItems = coerceArray<unknown>(block.data);
-				popupItems.forEach((entry, index) => {
-					const normalized = normalizePopup(entry, popups.length + index);
-					if (!normalized) {
-						return;
-					}
-					normalized.enabled = normalized.enabled && block.enabled;
-					normalized.placement = normalized.placement.length > 0 ? normalized.placement : block.placement;
-					popups.push(normalized);
-				});
+				sawPopupBlock = true;
+				if (block.enabled) {
+					const popupItems = coerceArray<unknown>(block.data);
+					popupItems.forEach((entry, index) => {
+						const normalized = normalizePopup(entry, blockPopups.length + index);
+						if (!normalized) {
+							return;
+						}
+						normalized.enabled = normalized.enabled && block.enabled;
+						normalized.placement = normalized.placement.length > 0 ? normalized.placement : block.placement;
+						blockPopups.push(normalized);
+					});
+				}
 				break;
 			}
 			case 'video': {
-				videos.push(
-					...coerceArray<unknown>(block.data)
-						.map((entry) => normalizeVideo(entry))
-						.filter((entry): entry is VideoAsset => Boolean(entry))
-						.map((entry) => ({
-							...entry,
-							placement: entry.placement && entry.placement.length > 0 ? entry.placement : block.placement,
-						}))
-				);
+				sawVideoBlock = true;
+				if (block.enabled) {
+					blockVideos.push(
+						...coerceArray<unknown>(block.data)
+							.map((entry) => normalizeVideo(entry))
+							.filter((entry): entry is VideoAsset => Boolean(entry))
+							.map((entry) => ({
+								...entry,
+								placement: entry.placement && entry.placement.length > 0 ? entry.placement : block.placement,
+							}))
+					);
+				}
 				break;
 			}
 			case 'mediaCollection': {
-				const collections = coerceArray<unknown>(block.data)
-					.map((entry, index) => normalizeMediaCollection(entry, mediaCollections.length + index))
-					.filter((entry): entry is MediaCollection => Boolean(entry));
-				mediaCollections.push(...collections.map((entry) => ({ ...entry, enabled: entry.enabled && block.enabled })));
+				sawMediaCollectionBlock = true;
+				if (block.enabled) {
+					const collections = coerceArray<unknown>(block.data)
+						.map((entry, index) => normalizeMediaCollection(entry, blockMediaCollections.length + index))
+						.filter((entry): entry is MediaCollection => Boolean(entry));
+					blockMediaCollections.push(...collections.map((entry) => ({ ...entry, enabled: entry.enabled && block.enabled })));
+				}
 				break;
 			}
 			case 'sponsors': {
-				sponsors.push(
-					...coerceArray<unknown>(block.data)
-						.map((entry) => normalizeSponsor(entry))
-						.filter((entry): entry is Sponsor => Boolean(entry))
-				);
+				sawSponsorsBlock = true;
+				if (block.enabled) {
+					blockSponsors.push(
+						...coerceArray<unknown>(block.data)
+							.map((entry) => normalizeSponsor(entry))
+							.filter((entry): entry is Sponsor => Boolean(entry))
+					);
+				}
 				break;
 			}
 			case 'faqs': {
-				faqs.push(
-					...coerceArray<unknown>(block.data)
-						.map((entry) => normalizeFaq(entry))
-						.filter((entry): entry is FaqItem => Boolean(entry))
-				);
+				sawFaqsBlock = true;
+				if (block.enabled) {
+					blockFaqs.push(
+						...coerceArray<unknown>(block.data)
+							.map((entry) => normalizeFaq(entry))
+							.filter((entry): entry is FaqItem => Boolean(entry))
+					);
+				}
 				break;
 			}
 			default: {
@@ -621,13 +670,26 @@ export const extractConnectedModules = (
 		});
 	}
 
+	const mediaCollections = sawMediaCollectionBlock ? blockMediaCollections : topLevelMediaCollections;
+	const videos = sawVideoBlock ? blockVideos : topLevelVideos;
+	const gallery = sawGalleryBlock ? blockGallery : topLevelGallery;
+	const stats = sawStatsBlock ? blockStats : topLevelStats;
+	const eventsAll = sawEventsBlock ? blockEvents : topLevelEvents;
+	const scheduleDays = sawScheduleBlock ? blockScheduleDays : topLevelScheduleDays;
+	const popups = sawPopupBlock ? blockPopups : topLevelPopups;
+	const sponsors = sawSponsorsBlock ? blockSponsors : topLevelSponsors;
+	const faqs = sawFaqsBlock ? blockFaqs : topLevelFaqs;
+	const hero = sawHeroBlock ? blockHero : topLevelHero;
+
+	const collectionGallery: ImageAsset[] = [];
+	const collectionVideos: VideoAsset[] = [];
 	for (const collection of mediaCollections) {
 		for (const item of collection.items) {
 			if (isImageAsset(item)) {
-				gallery.push(item);
+				collectionGallery.push(item);
 			}
 			if (isVideoAsset(item)) {
-				videos.push(item);
+				collectionVideos.push(item);
 			}
 		}
 	}
@@ -635,9 +697,12 @@ export const extractConnectedModules = (
 	const dedupedStats = dedupeByKey(stats, (item) => item.label.toLowerCase());
 	const dedupedEvents = dedupeByKey(eventsAll.reverse(), (item) => item.id).reverse();
 	const dedupedScheduleDays = dedupeByKey(scheduleDays, (item) => `${item.dayLabel}-${item.dateLabel}`.toLowerCase());
-	const dedupedGallery = dedupeByKey(gallery, (item) => item.src);
+	const dedupedGallery = dedupeByKey(
+		collectionGallery.length > 0 ? collectionGallery : gallery,
+		(item) => item.src
+	);
 	const dedupedPopups = dedupeByKey(popups, (item) => item.id);
-	const dedupedVideos = dedupeByKey(videos, (item) => item.src);
+	const dedupedVideos = dedupeByKey([...videos, ...collectionVideos], (item) => item.src);
 	const dedupedCollections = dedupeByKey(mediaCollections, (item) => item.id);
 	const dedupedSponsors = dedupeByKey(sponsors, (item) => item.name.toLowerCase());
 	const dedupedFaqs = dedupeByKey(faqs, (item) => item.question.toLowerCase());

@@ -622,7 +622,10 @@ const fetchRemoteFestivalContent = async (siteSlug: string): Promise<FestivalCon
 			return null;
 		}
 		const payload = (await response.json()) as IntegrationApiResponse;
+		console.log('WeBe Payload:', payload);
 		const normalized = normalizeFestivalContent(payload);
+		console.log('Normalized Content:', normalized);
+		console.log('Events After Normalize:', normalized?.events);
 		if (!normalized) {
 			console.warn('Received unexpected payload from WeBeFriends API.');
 			return null;

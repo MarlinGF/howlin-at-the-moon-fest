@@ -287,3 +287,6 @@ if (document.readyState === 'loading') {
 document.addEventListener('astro:page-load', () => {
 	void initGalleryModals();
 });
+document.addEventListener('webe:gallery-modals-ready', () => {
+	void initGalleryModals();
+});

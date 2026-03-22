@@ -42,12 +42,6 @@ type IntegrationApiResponse = ConnectedModulePayload & {
 	meta?: Partial<IntegrationMeta>;
 };
 
-type CacheEntry = {
-	data: FestivalContent;
-	expiresAt: number;
-	staleAt: number;
-};
-
 type CachedFestivalContent = {
 	content: FestivalContent;
 	cachedAt?: string;
@@ -65,9 +59,7 @@ const API_BASE_URL = (() => {
 const DEFAULT_SITE_SLUG = import.meta.env.WEBE_SITE_SLUG ?? 'howlin-yuma';
 const API_KEY = import.meta.env.WEBE_API_KEY;
 
-const cache = new Map<string, CacheEntry>();
 const SITES_COLLECTION = 'webeSites';
-const FIRESTORE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const serializeForStore = <T>(value: T): T => {
 	try {
@@ -336,6 +328,29 @@ function clone<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function createEmptyFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG): FestivalContent {
+	return {
+		meta: {
+			siteSlug,
+			siteName: fallbackFestivalContentTemplate.meta.siteName,
+			sourcePageId: 'webe-source-page',
+			generatedAt: new Date().toISOString(),
+		},
+		hero: undefined,
+		stats: [],
+		events: [],
+		eventsAll: [],
+		schedule: { days: [] },
+		gallery: [],
+		popups: [],
+		videos: [],
+		mediaCollections: [],
+		sponsors: [],
+		faqs: [],
+		modules: [],
+	};
+}
+
 function createFallbackFestivalContent(): FestivalContent {
 	const fallback = clone(fallbackFestivalContentTemplate);
 	fallback.meta.generatedAt = new Date().toISOString();
@@ -479,7 +494,7 @@ function parseCacheControl(header: string | null): { maxAgeMs: number; staleWhil
 
 async function requestFestivalContent(siteSlug: string): Promise<{ content: FestivalContent; cache: { maxAgeMs: number; staleWhileRevalidateMs: number } } | null> {
 	if (!API_KEY) {
-		console.warn('WEBE_API_KEY is not set. Falling back to local mock data.');
+		console.warn('WEBE_API_KEY is not set. Live WeBe content cannot be fetched.');
 		return null;
 	}
 	const url = `${API_BASE_URL}/${siteSlug}`;
@@ -507,9 +522,12 @@ async function requestFestivalContent(siteSlug: string): Promise<{ content: Fest
 			return null;
 		}
 		const payload = (await response.json()) as IntegrationApiResponse;
+		console.log('WeBe Payload:', payload);
 		const normalized = normalizeFestivalContent(payload);
+		console.log('Normalized Content:', normalized);
+		console.log('Events After Normalize:', normalized?.events);
 		if (!normalized) {
-			console.warn('Received an unexpected payload from WeBeFriends. Falling back to mock data.');
+			console.warn('Received an unexpected payload from WeBeFriends.');
 			return null;
 		}
 		return {
@@ -530,63 +548,20 @@ async function requestFestivalContent(siteSlug: string): Promise<{ content: Fest
 }
 
 export async function fetchFestivalContent(siteSlug: string = DEFAULT_SITE_SLUG): Promise<FestivalContent> {
-	const now = Date.now();
-	const pivot = new Date(now);
-	const memoryEntry = cache.get(siteSlug);
-	if (memoryEntry && now < memoryEntry.expiresAt) {
-		const refreshed = refreshFestivalContent(memoryEntry.data, { now: pivot });
-		cache.set(siteSlug, { ...memoryEntry, data: refreshed });
-		return clone(refreshed);
-	}
-
-	const staleEntry = memoryEntry && now < memoryEntry.staleAt ? memoryEntry.data : null;
-
 	const remote = await requestFestivalContent(siteSlug);
 	if (remote) {
-		const { content, cache: cacheMetadata } = remote;
-		const refreshed = refreshFestivalContent(content, { now: pivot });
-		cache.set(siteSlug, {
-			data: refreshed,
-			expiresAt: now + cacheMetadata.maxAgeMs,
-			staleAt: now + cacheMetadata.maxAgeMs + cacheMetadata.staleWhileRevalidateMs,
-		});
+		const { content } = remote;
+		const refreshed = refreshFestivalContent(content, { now: new Date() });
 		void writeCachedFestivalContent(siteSlug, refreshed);
 		return clone(refreshed);
 	}
 
 	const stored = await readCachedFestivalContent(siteSlug);
 	if (stored) {
-		const { content, cachedAt } = stored;
-		const refreshed = refreshFestivalContent(content, { now: pivot });
-		const cachedAtMs = cachedAt ? Date.parse(cachedAt) : Number.NaN;
-		const ageMs = Number.isFinite(cachedAtMs) ? now - cachedAtMs : Number.POSITIVE_INFINITY;
-		const remainingTtl = Math.max(FIRESTORE_CACHE_TTL_MS - ageMs, 0);
-		cache.set(siteSlug, {
-			data: refreshed,
-			expiresAt: now + remainingTtl,
-			staleAt: now + FIRESTORE_CACHE_TTL_MS,
-		});
+		const { content } = stored;
+		const refreshed = refreshFestivalContent(content, { now: new Date() });
 		return clone(refreshed);
 	}
 
-	if (staleEntry) {
-		console.warn('Serving stale WeBeFriends content from cache.');
-		const refreshed = refreshFestivalContent(staleEntry, { now: pivot });
-		cache.set(siteSlug, {
-			data: refreshed,
-			expiresAt: now + 30_000,
-			staleAt: now + 30_000,
-		});
-		return clone(refreshed);
-	}
-
-	const fallback = createFallbackFestivalContent();
-	const refreshedFallback = refreshFestivalContent(fallback, { now: pivot });
-	cache.set(siteSlug, {
-		data: refreshedFallback,
-		expiresAt: now + 120_000,
-		staleAt: now + 420_000,
-	});
-	// Never persist mock fallback content to Firestore; this can overwrite real integration data.
-	return clone(refreshedFallback);
+	return createEmptyFestivalContent(siteSlug);
 }

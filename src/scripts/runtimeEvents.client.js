@@ -91,7 +91,7 @@ const createHighlightCard = (event, formatTime) => {
         'group relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 text-left transition hover:border-fuchsia-400/70 hover:shadow-fuchsia-500/20';
     button.dataset.openModal = `modal-${event.id}`;
     button.innerHTML = `
-        <img src="${event.image?.src ?? '/images/events/moonrise.svg'}" alt="${event.image?.alt ?? ''}" class="h-48 w-full object-cover object-center transition duration-500 group-hover:scale-105" />
+        <img src="${event.image.src}" alt="${event.image.alt ?? ''}" class="h-48 w-full object-cover object-center transition duration-500 group-hover:scale-105" />
         <div class="flex flex-col gap-3 p-6">
             <p class="text-xs font-semibold uppercase tracking-[0.4em] text-fuchsia-300/90">${event.stage}</p>
             <h3 class="text-xl font-semibold text-white">${event.title}</h3>
@@ -199,7 +199,7 @@ const createModal = (event, formatTime) => {
                     &times;
                 </button>
             </div>
-            <img src="${event.image?.src ?? '/images/events/moonrise.svg'}" alt="${event.image?.alt ?? ''}" class="h-60 w-full rounded-2xl object-cover object-center" />
+            <img src="${event.image.src}" alt="${event.image.alt ?? ''}" class="h-60 w-full rounded-2xl object-cover object-center" />
             <div class="flex flex-wrap gap-4 text-sm text-slate-200">
                 <div class="flex items-center gap-2">
                     <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400"></span>
@@ -287,7 +287,7 @@ const updateHeading = (events) => {
     heading.textContent = getHeading(events);
 };
 const fetchEvents = async (endpoint) => {
-    const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+    const response = await fetch(endpoint, { headers: { Accept: 'application/json' }, cache: 'no-store' });
     if (!response.ok) {
         throw new Error(`eventsApi responded with ${response.status}`);
     }
@@ -332,4 +332,7 @@ if (document.readyState === 'loading') {
 else {
     void bootstrapEvents();
 }
+document.addEventListener('astro:page-load', () => {
+    void bootstrapEvents();
+});
 export {};

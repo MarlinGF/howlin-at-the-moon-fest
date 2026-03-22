@@ -1,52 +1,23 @@
 import type { Response } from 'express';
 import { onRequest } from 'firebase-functions/v2/https';
 
+import { selectFrontPagePopups } from './connectedModules';
 import { firestore } from './firebaseAdmin';
+import { filterUpcomingEvents } from './eventUtils';
+import type { EventDetail, ImageAsset, PopupBlock } from './webeTypes';
 import { fetchLiveFestivalContent } from './webeIntegration';
 
 const SITES_COLLECTION = 'webeSites';
 const DEFAULT_SITE_SLUG = process.env.WEBE_SITE_SLUG ?? 'howlin-yuma';
-const DAY_MS = 24 * 60 * 60 * 1000;
 
-type ImageAsset = {
-    src: string;
-    alt?: string;
-};
-
-type StoredEvent = {
-    id?: string;
-    title?: string;
-    stage?: string;
-    dayLabel?: string;
-    area?: string;
-    start?: string;
-    end?: string;
-    description?: string;
-    image?: unknown;
-    tags?: unknown;
-    metadata?: Record<string, unknown>;
-    status?: string;
-    [key: string]: unknown;
-};
-
-type RuntimeEvent = {
-    id: string;
-    title: string;
-    stage: string;
-    dayLabel: string;
-    area: string;
-    start: string;
-    end: string;
-    description: string;
-    image?: ImageAsset;
-    tags: string[];
-    metadata?: Record<string, unknown>;
+type RuntimeEvent = EventDetail & {
     status?: string;
 };
 
 type SiteDoc = {
     content?: {
         events?: unknown;
+        popups?: unknown;
     };
 };
 
@@ -91,10 +62,13 @@ const normalizeEvent = (value: unknown): RuntimeEvent | null => {
     }
     const description = typeof value.description === 'string' ? value.description : '';
     const image = coerceImage(value.image);
+    if (!image) {
+        return null;
+    }
     const tags = coerceTags(value.tags);
     const metadata = isRecord(value.metadata) ? (value.metadata as Record<string, unknown>) : undefined;
     const status = typeof value.status === 'string' ? value.status : undefined;
-    return {
+    const normalized: RuntimeEvent = {
         id,
         title,
         stage,
@@ -108,6 +82,7 @@ const normalizeEvent = (value: unknown): RuntimeEvent | null => {
         metadata,
         status,
     };
+    return normalized;
 };
 
 const resolveStatus = (event: RuntimeEvent): string => {
@@ -121,26 +96,9 @@ const resolveStatus = (event: RuntimeEvent): string => {
     return 'published';
 };
 
-const isWithinWindow = (event: RuntimeEvent, nowMs: number): boolean => {
-    const startMs = Date.parse(event.start);
-    if (!Number.isFinite(startMs)) {
-        return false;
-    }
-    if (startMs >= nowMs) {
-        return true;
-    }
-    return nowMs - startMs <= DAY_MS;
-};
-
-const filterEvents = (events: RuntimeEvent[], pivot: number): RuntimeEvent[] => {
-    return events
-        .filter((event) => resolveStatus(event) === 'published' && isWithinWindow(event, pivot))
-        .sort((a, b) => {
-            const aTime = Date.parse(a.start);
-            const bTime = Date.parse(b.start);
-            return aTime - bTime;
-        })
-        .map((event) => ({ ...event }));
+const filterEvents = (events: RuntimeEvent[], now: Date): EventDetail[] => {
+    const published = events.filter((event) => resolveStatus(event) === 'published');
+    return filterUpcomingEvents(published, { now });
 };
 
 const extractEvents = (data: unknown): unknown[] => {
@@ -156,6 +114,21 @@ const extractEvents = (data: unknown): unknown[] => {
         return [];
     }
     return events;
+};
+
+const extractPopups = (data: unknown): PopupBlock[] => {
+    if (!isRecord(data)) {
+        return [];
+    }
+    const content = data.content;
+    if (!isRecord(content)) {
+        return [];
+    }
+    const popups = content.popups;
+    if (!Array.isArray(popups)) {
+        return [];
+    }
+    return popups.filter((entry): entry is PopupBlock => isRecord(entry) && typeof entry.id === 'string' && typeof entry.title === 'string');
 };
 
 const setCorsHeaders = (res: Response) => {
@@ -178,13 +151,22 @@ export const eventsApi = onRequest({ cors: false }, async (req, res) => {
     }
 
     const siteSlug = process.env.WEBE_SITE_SLUG ?? DEFAULT_SITE_SLUG;
+    const pivot = new Date();
 
     try {
         const liveContent = await fetchLiveFestivalContent(siteSlug);
         if (liveContent) {
+            const sourceEvents = Array.isArray(liveContent.eventsAll) && liveContent.eventsAll.length > 0
+                ? liveContent.eventsAll
+                : Array.isArray(liveContent.events)
+                    ? liveContent.events
+                    : [];
+            const events = filterUpcomingEvents(sourceEvents, { now: pivot });
+            const popups = selectFrontPagePopups(Array.isArray(liveContent.popups) ? liveContent.popups : []);
             res.set('Cache-Control', 'no-store');
             res.status(200).json({
-                events: Array.isArray(liveContent.events) ? liveContent.events : [],
+                events,
+                popups,
                 generatedAt: liveContent.meta.generatedAt,
                 source: liveContent.meta.sourcePageId ?? 'webe-api',
             });
@@ -197,7 +179,7 @@ export const eventsApi = onRequest({ cors: false }, async (req, res) => {
     try {
         const snapshot = await firestore.collection(SITES_COLLECTION).doc(siteSlug).get();
         if (!snapshot.exists) {
-            res.status(404).json({ events: [] });
+            res.status(404).json({ events: [], popups: [] });
             return;
         }
         const doc = snapshot.data() as SiteDoc | undefined;
@@ -205,11 +187,13 @@ export const eventsApi = onRequest({ cors: false }, async (req, res) => {
         const normalized = rawEvents
             .map((entry) => normalizeEvent(entry))
             .filter((entry): entry is RuntimeEvent => Boolean(entry));
-        const filtered = filterEvents(normalized, Date.now());
+        const filtered = filterEvents(normalized, pivot);
+        const storedPopups = extractPopups(doc ?? {});
+        const popups = selectFrontPagePopups(storedPopups);
         res.set('Cache-Control', 'no-store');
-        res.status(200).json({ events: filtered });
+        res.status(200).json({ events: filtered, popups });
     } catch (error) {
         console.error('eventsApi failed to load events', error);
-        res.status(500).json({ events: [], error: 'Unable to load events' });
+        res.status(500).json({ events: [], popups: [], error: 'Unable to load events' });
     }
 });

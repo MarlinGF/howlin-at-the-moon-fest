@@ -1,6 +1,7 @@
 import { onRequest, type Request } from 'firebase-functions/v2/https';
 
 import { getVisitorHash, registerVisitor } from './visitorCounter';
+import { contentApi } from './contentApi';
 import { eventsApi } from './eventsApi';
 import { webeEvents } from './webeWebhook';
 import { webeNightlyRefresh } from './webeRefresh';
@@ -41,4 +42,4 @@ export const visitorCount = onRequest(async (req, res) => {
 	}
 });
 
-export { eventsApi, webeEvents, webeNightlyRefresh };
+export { contentApi, eventsApi, webeEvents, webeNightlyRefresh };

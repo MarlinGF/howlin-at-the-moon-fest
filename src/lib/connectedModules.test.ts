@@ -63,6 +63,62 @@ describe('connected modules extraction', () => {
 		expect(result.gallery[0]?.src).toBe('/images/gallery/dome-lights.svg');
 	});
 
+	it('prefers album images over flat gallery items when both are present', () => {
+		const result = extractConnectedModules({
+			gallery: [{ src: '/images/gallery/legacy-flat.svg', alt: 'Legacy flat item' }],
+			mediaCollections: [
+				{
+					id: 'album-1',
+					items: [{ src: '/images/gallery/live-album.svg', alt: 'Live album item' }],
+				},
+			],
+		});
+
+		expect(result.gallery).toHaveLength(1);
+		expect(result.gallery[0]?.src).toBe('/images/gallery/live-album.svg');
+	});
+
+	it('treats block events as authoritative when they are present', () => {
+		const result = extractConnectedModules({
+			events: [
+				{
+					id: 'legacy-event',
+					title: 'Legacy Event',
+					stage: 'Old Stage',
+					dayLabel: 'Friday',
+					area: 'Old Area',
+					start: '2026-10-18T18:00:00-07:00',
+					end: '2026-10-18T19:00:00-07:00',
+					description: '',
+					image: { src: '/images/events/moonrise.svg', alt: '' },
+					tags: [],
+				},
+			],
+			blocks: [
+				{
+					type: 'events',
+					data: [
+						{
+							id: 'live-event',
+							title: 'Live Event',
+							stage: 'Main Stage',
+							dayLabel: 'Saturday',
+							area: 'Courtyard',
+							start: '2026-10-19T19:30:00-07:00',
+							end: '2026-10-19T20:30:00-07:00',
+							description: '',
+							image: { src: '/images/events/starlit-groove.svg', alt: '' },
+							tags: [],
+						},
+					],
+				},
+			],
+		});
+
+		expect(result.eventsAll).toHaveLength(1);
+		expect(result.eventsAll[0]?.id).toBe('live-event');
+	});
+
 	it('handles unknown future blocks without crashing and logs block type', () => {
 		const logger = { info: vi.fn(), warn: vi.fn() };
 		const result = extractConnectedModules(

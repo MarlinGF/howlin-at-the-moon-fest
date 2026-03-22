@@ -72,5 +72,6 @@ if (document.readyState === 'loading') {
 }
 
 document.addEventListener('astro:page-load', initAllGrids);
+document.addEventListener('webe:gallery-ready', initAllGrids);
 
 export {};
